@@ -1,0 +1,2174 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: 1d12408342854fd5a4436dd6d5d1bd4a
+      name: Templates/Telephony
+  templates:
+    - uuid: 1d6c69fc149a48febbf6a61ce8dc3d33
+      template: 'Cisco Unity Connection 15 by API'
+      name: 'Cisco Unity Connection 15 by API'
+      description: 'Cisco Unity Connection 15 monitoring through read-only VMREST/CUPI, Cisco Serviceability PerfMon and ControlCenter SOAP, and the Cisco VOS Certificate Management API. Set the endpoint, node, and least-privilege secret macros on the host before linking. Operator items use scope=operator; transport/master payloads use scope=internal.'
+      groups:
+        - name: Templates/Telephony
+      items:
+        - uuid: b69b5c4a20d84ac5a88d263bf56d6731
+          name: 'CUC: VMREST API availability'
+          type: DEPENDENT
+          key: cuc.api.available
+          delay: '0'
+          history: 7d
+          description: 'Whether the VMREST version request succeeded. Collection OK means the Unity application API is reachable and authenticated.'
+          valuemap:
+            name: 'CUC VMREST availability'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.available
+          master_item:
+            key: cuc.api.health.raw
+          tags:
+            - tag: component
+              value: api
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 1bfc6d366ea649b0982df947315e1029
+              expression: 'max(/Cisco Unity Connection 15 by API/cuc.api.available,3m)=0'
+              name: 'CUC: VMREST API is unavailable'
+              priority: HIGH
+              description: 'Review the related Latest Data item, its history, and neighboring Unity/VOS health metrics before taking action.'
+        - uuid: 1367f12771d14eaebf6115b1adf13a13
+          name: 'CUC: Certificate Management collection health'
+          type: DEPENDENT
+          key: cuc.api.certificate.health
+          delay: '0'
+          history: 7d
+          description: 'Health of the most recent Cisco VOS Certificate Management API collection. Collection OK means a valid identity-certificate snapshot was returned.'
+          valuemap:
+            name: 'CUC collection health'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'if(value.indexOf(''identities'')<0||value.indexOf(''Fault'')>=0)throw ''invalid API response'';return 1;'
+          master_item:
+            key: cuc.certificate.snapshot.raw
+          tags:
+            - tag: component
+              value: api
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 9a8d999547d441e18fc42f5d19da5fb9
+              expression: 'nodata(/Cisco Unity Connection 15 by API/cuc.api.certificate.health,12h)=1'
+              name: 'CUC Certificate Management API health has no successful data for 12 hours'
+              priority: HIGH
+              description: 'Review the related Latest Data item, its history, and neighboring Unity/VOS health metrics before taking action.'
+              tags:
+                - tag: scope
+                  value: api
+        - uuid: 0fef8123ac3d4fa89d63dcf82192fc40
+          name: 'CUC: API error'
+          type: DEPENDENT
+          key: cuc.api.error
+          delay: '0'
+          history: 7d
+          value_type: TEXT
+          trends: '0'
+          description: 'Last VMREST collection error. Empty means the most recent request completed without an application-level error.'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.error
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1h
+          master_item:
+            key: cuc.api.health.raw
+          tags:
+            - tag: component
+              value: api
+            - tag: scope
+              value: operator
+        - uuid: 6c67bc65992d4dfcbfb3b877473b510b
+          name: 'CUC internal: VMREST health raw/master'
+          type: SCRIPT
+          key: cuc.api.health.raw
+          delay: '{$CUC.API.INTERVAL}'
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          params: |
+            var p = JSON.parse(value),
+                request = new HttpRequest(),
+                started = Date.now(),
+                result = {
+                    available: 0,
+                    http_status: 0,
+                    response_time_ms: 0,
+                    error: '',
+                    payload: ''
+                };
+            
+            request.setHttpAuth(HTTPAUTH_BASIC, p.username, p.password);
+            request.addHeader('Accept: application/json, application/xml;q=0.9, text/xml;q=0.8');
+            
+            try {
+                result.payload = request.get(p.url);
+                result.http_status = request.getStatus();
+                result.available = result.http_status >= 200 && result.http_status < 400 ? 1 : 0;
+            }
+            catch (e) {
+                result.error = String(e);
+            }
+            
+            result.response_time_ms = Date.now() - started;
+            return JSON.stringify(result);
+          description: 'Internal transport/master item. Raw API payload for dependent operator items: VMREST availability, HTTP status, response time, and error text. Filter scope=internal; do not use this raw value for incident interpretation.'
+          timeout: '{$CUC.API.TIMEOUT}'
+          parameters:
+            - name: password
+              value: '{$CUC.API.PASSWORD}'
+            - name: url
+              value: '{$CUC.URL}/vmrest/version'
+            - name: username
+              value: '{$CUC.API.USER}'
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: 8d46795e693b46f2b4da3ae0c9592ec4
+          name: 'CUC: API HTTP status'
+          type: DEPENDENT
+          key: cuc.api.http_status
+          delay: '0'
+          history: 7d
+          description: 'HTTP status returned by the VMREST version endpoint. The expected successful value is 200.'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.http_status
+          master_item:
+            key: cuc.api.health.raw
+          tags:
+            - tag: component
+              value: api
+            - tag: scope
+              value: operator
+        - uuid: 9a3a3c96c313474baebc7953acad89b8
+          name: 'CUC: phone-system PerfMon collection health'
+          type: DEPENDENT
+          key: cuc.api.phone_system.health
+          delay: '0'
+          history: 7d
+          description: 'Health of the Unity phone-system PerfMon collector. Collection OK means the expected CUC Phone System counters were returned without a SOAP fault.'
+          valuemap:
+            name: 'CUC collection health'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'if(value.indexOf("CUC Phone System")<0||value.indexOf("Fault")>=0)throw "invalid phone-system response";return 1;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: api
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 1b46f0e37178466b88ff0a42776326da
+              expression: 'nodata(/Cisco Unity Connection 15 by API/cuc.api.phone_system.health,10m)=1'
+              name: 'CUC phone-system PerfMon API has no successful data for 10 minutes'
+              priority: HIGH
+              description: 'No valid API collection arrived within the stated period. Verify credentials, required services, endpoint reachability, and certificate settings.'
+              tags:
+                - tag: component
+                  value: api
+        - uuid: f8360e02cf9c4a2a81c9fa537847934f
+          name: 'CUC: API response time'
+          type: DEPENDENT
+          key: cuc.api.response_time
+          delay: '0'
+          history: 7d
+          units: ms
+          description: 'End-to-end response time of the VMREST health request, measured by the Zabbix server or proxy.'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.response_time_ms
+          master_item:
+            key: cuc.api.health.raw
+          tags:
+            - tag: component
+              value: api
+            - tag: scope
+              value: operator
+        - uuid: 88062949d1a04564a8bcfe4a7897cba3
+          name: 'CUC: calls current'
+          type: DEPENDENT
+          key: cuc.calls.current
+          delay: '0'
+          history: 30d
+          units: calls
+          description: 'Calls currently handled by Unity Connection across the monitored phone system.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Call Count Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Call Count Current";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+        - uuid: 072742c0130244f491b764d58f78c042
+          name: 'CUC: average call duration'
+          type: DEPENDENT
+          key: cuc.calls.duration.average
+          delay: '0'
+          history: 30d
+          value_type: FLOAT
+          units: s
+          description: 'Average duration in seconds of calls handled by Unity Connection since the counter statistics were initialized.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Call Duration Average [s]",p=value.indexOf(marker);if(p<0)throw "counter absent: Call Duration Average [s]";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+        - uuid: ac052a1a5a614d9e87fdf3162c7c7baf
+          name: 'CUC: incoming calls total'
+          type: DEPENDENT
+          key: cuc.calls.incoming.total
+          delay: '0'
+          history: 30d
+          units: calls
+          description: 'Cumulative incoming calls presented to Unity Connection since the service counters were initialized.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Incoming Calls Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Incoming Calls Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+        - uuid: 6442b1a54660420b8524ac021e020adb
+          name: 'CUC: missed calls total'
+          type: DEPENDENT
+          key: cuc.calls.missed.total
+          delay: '0'
+          history: 30d
+          units: calls
+          description: 'Cumulative calls recorded by Unity Connection as missed. Use changes and trends to correlate with port exhaustion or call-routing faults.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Missed Call Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Missed Call Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+        - uuid: aece11c6f6f94dbaa146c42aab0c84d8
+          name: 'CUC: calls total'
+          type: DEPENDENT
+          key: cuc.calls.total
+          delay: '0'
+          history: 30d
+          units: calls
+          description: 'Cumulative calls handled by Unity Connection since the phone-system counters were initialized.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Call Count Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Call Count Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+        - uuid: 6651ea6794f7451199d53cd017511765
+          name: 'CUC: calls unanswered total'
+          type: DEPENDENT
+          key: cuc.calls.unanswered.total
+          delay: '0'
+          history: 30d
+          units: calls
+          description: 'Cumulative calls Unity Connection did not answer. An increase can indicate unavailable or exhausted voice ports.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Calls Unanswered Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Calls Unanswered Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+        - uuid: c1e570336e6c491083a28d8f0888475b
+          name: 'CUC internal: Certificate Management identity snapshot raw/master'
+          type: HTTP_AGENT
+          key: cuc.certificate.snapshot.raw
+          delay: 6h
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUC.OS.USER}'
+          password: '{$CUC.OS.PASSWORD}'
+          description: 'Internal transport/master item. Raw API payload for dependent operator items: certificate discovery and certificate metadata. Filter scope=internal; do not use this raw value for incident interpretation.'
+          timeout: 45s
+          url: '{$CUC.CERT.URL}/platformcom/api/v1/certmgr/config/snapshot/server'
+          http_proxy: '{$CUC.HTTP.PROXY}'
+          headers:
+            - name: Accept
+              value: application/json
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: 671f54df23ab44168fea197b7a36fe7d
+          name: 'CUC internal: ControlCenter critical services raw/master'
+          type: HTTP_AGENT
+          key: cuc.control.services.raw
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUC.API.USER}'
+          password: '{$CUC.API.PASSWORD}'
+          description: 'Internal transport/master item. Raw API payload for dependent operator items: critical Unity and VOS service discovery and runtime state. Filter scope=internal; do not use this raw value for incident interpretation.'
+          timeout: '{$CUC.API.TIMEOUT}'
+          url: '{$CUC.SERVICEABILITY.URL}/controlcenterservice2/services/ControlCenterServices'
+          http_proxy: '{$CUC.HTTP.PROXY}'
+          posts: '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://schemas.cisco.com/ast/soap"><s:Body><ns:soapGetServiceStatus><ns:ServiceStatus>Connection Conversation Manager</ns:ServiceStatus><ns:ServiceStatus>Connection Mixer</ns:ServiceStatus><ns:ServiceStatus>Connection Message Transfer Agent</ns:ServiceStatus><ns:ServiceStatus>Connection Notifier</ns:ServiceStatus><ns:ServiceStatus>Connection REST Tomcat</ns:ServiceStatus><ns:ServiceStatus>Connection Administration</ns:ServiceStatus><ns:ServiceStatus>Connection DB Event Publisher</ns:ServiceStatus><ns:ServiceStatus>Connection Mailbox Sync</ns:ServiceStatus><ns:ServiceStatus>Connection Smart License Manager Server</ns:ServiceStatus><ns:ServiceStatus>SOAP -Performance Monitoring APIs</ns:ServiceStatus><ns:ServiceStatus>Cisco Tomcat</ns:ServiceStatus></ns:soapGetServiceStatus></s:Body></s:Envelope>'
+          headers:
+            - name: Content-Type
+              value: 'text/xml; charset=utf-8'
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: 82614990b36443d9a17509dce8b78fd6
+          name: 'CUC: CPU PerfMon collection health'
+          type: DEPENDENT
+          key: cuc.cpu.health
+          delay: '0'
+          history: 7d
+          description: 'Health of the current PerfMon CPU collection session. Collection OK means valid processor samples were returned.'
+          valuemap:
+            name: 'CUC collection health'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var x=JSON.parse(value);return x.ok&&x.session_closed?1:0;'
+          master_item:
+            key: cuc.perfmon.cpu.master
+          tags:
+            - tag: component
+              value: cpu
+            - tag: scope
+              value: operator
+        - uuid: 9f897777584146f58a8e825ac2f5e600
+          name: 'CUC: CPU utilization'
+          type: DEPENDENT
+          key: cuc.cpu.util
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          units: '%'
+          description: 'Average CPU utilization across discovered processors during the current polling interval.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var x=JSON.parse(value);if(!x.ok||x.cstatus!==0||x.cpu<0||x.cpu>100)throw "invalid CPU sample";return x.cpu;'
+          master_item:
+            key: cuc.perfmon.cpu.master
+          tags:
+            - tag: component
+              value: cpu
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 018fe4d925944caa9a03461bf1ef1cca
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.cpu.util,10m)>{$CUC.CPU.WARN} and min(/Cisco Unity Connection 15 by API/cuc.cpu.util,10m)<={$CUC.CPU.HIGH}'
+              name: 'CUC: CPU utilization is elevated'
+              priority: WARNING
+              description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
+              tags:
+                - tag: component
+                  value: cpu
+            - uuid: f5446f0f98924149b65650f89d443bbf
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.cpu.util,10m)>{$CUC.CPU.HIGH}'
+              name: 'CUC: CPU utilization is high'
+              priority: HIGH
+              description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
+              tags:
+                - tag: component
+                  value: cpu
+        - uuid: 9dce7ba2da194964ba2edce404dad0ef
+          name: 'CUC: memory free'
+          type: DEPENDENT
+          key: cuc.memory.free
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          units: B
+          description: 'Currently available physical memory reported by Cisco VOS PerfMon.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("Free KBytes");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(value.slice(p));if(!r||Number(r[2])!==1)throw "invalid Free KBytes counter";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid Free KBytes value";return n*1024;'
+          master_item:
+            key: cuc.perfmon.memory.raw
+          tags:
+            - tag: component
+              value: memory
+            - tag: scope
+              value: operator
+        - uuid: 390c942c64e8403c8f2b3eca3ae3a8f2
+          name: 'CUC: memory total'
+          type: DEPENDENT
+          key: cuc.memory.total
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          units: B
+          description: 'Total physical memory reported by Cisco VOS PerfMon.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("Total KBytes");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(value.slice(p));if(!r||Number(r[2])!==1)throw "invalid Total KBytes counter";var n=Number(r[1]);if(!isFinite(n)||n<=0)throw "invalid Total KBytes value";return n*1024;'
+          master_item:
+            key: cuc.perfmon.memory.raw
+          tags:
+            - tag: component
+              value: memory
+            - tag: scope
+              value: operator
+        - uuid: 6d21b1f9d36841b6ad6da2a3b68be6a2
+          name: 'CUC: memory utilization'
+          type: DEPENDENT
+          key: cuc.memory.util
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          units: '%'
+          description: 'Percentage of physical memory currently in use, calculated from the VOS PerfMon memory counters.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("% Mem Used");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(value.slice(p));if(!r||Number(r[2])!==1)throw "invalid memory counter";var n=Number(r[1]);if(!isFinite(n)||n<0||n>100)throw "invalid memory value";return n;'
+          master_item:
+            key: cuc.perfmon.memory.raw
+          tags:
+            - tag: component
+              value: memory
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: fd66cf7d7bb2401b8522a05568639ab4
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.memory.util,10m)>{$CUC.MEM.WARN} and min(/Cisco Unity Connection 15 by API/cuc.memory.util,10m)<={$CUC.MEM.HIGH}'
+              name: 'CUC: memory utilization is elevated'
+              priority: WARNING
+              description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
+              tags:
+                - tag: component
+                  value: memory
+            - uuid: d2df4590e8d74202b845861152d94274
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.memory.util,10m)>{$CUC.MEM.HIGH}'
+              name: 'CUC: memory utilization is high'
+              priority: HIGH
+              description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
+              tags:
+                - tag: component
+                  value: memory
+        - uuid: 59d75dd64cc049ba933a1fb3f2237eb4
+          name: 'CUC: MWI requests failed total'
+          type: DEPENDENT
+          key: cuc.mwi.failures.total
+          delay: '0'
+          history: 30d
+          description: 'Cumulative failed Message Waiting Indicator requests. The trigger reacts when this counter increases.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\MWI Requests Failed Total",p=value.indexOf(marker);if(p<0)throw "counter absent: MWI Requests Failed Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: fe2c53f77da24706b47c297880b19d57
+              expression: 'change(/Cisco Unity Connection 15 by API/cuc.mwi.failures.total)>0'
+              name: 'CUC recorded new MWI request failures'
+              priority: WARNING
+              description: 'The cumulative failure counter increased since the previous sample. Correlate the timestamp with Unity services, ports, call routing, and application logs.'
+              tags:
+                - tag: component
+                  value: telephony
+        - uuid: 6448c1b186754624bd6b1b9d23f50712
+          name: 'CUC: MWI requests total'
+          type: DEPENDENT
+          key: cuc.mwi.requests.total
+          delay: '0'
+          history: 30d
+          description: 'Cumulative Message Waiting Indicator requests sent by Unity Connection.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\MWI Requests Total",p=value.indexOf(marker);if(p<0)throw "counter absent: MWI Requests Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+        - uuid: 3a6ff39299ed43e9bc4e6b71981e9000
+          name: 'CUC: configured Unity nodes'
+          type: DEPENDENT
+          key: cuc.nodes.total
+          delay: '0'
+          history: 30d
+          value_type: FLOAT
+          description: 'Number of Unity Connection nodes returned by VMREST inventory.'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.nodes
+          master_item:
+            key: cuc.vmrest.inventory.raw
+          tags:
+            - tag: component
+              value: cluster
+            - tag: scope
+              value: operator
+        - uuid: c45c2bccd6ec41649d5f04b79e6bd13e
+          name: 'CUC: message notifications failed total'
+          type: DEPENDENT
+          key: cuc.notifications.failed.total
+          delay: '0'
+          history: 30d
+          description: 'Cumulative failed message-notification attempts. The trigger reacts when this counter increases.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Message Notifications Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Message Notifications Failed";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: notification
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: dea1c7e6f5964415a347236b6c1cd106
+              expression: 'change(/Cisco Unity Connection 15 by API/cuc.notifications.failed.total)>0'
+              name: 'CUC recorded new message-notification failures'
+              priority: WARNING
+              description: 'The cumulative failure counter increased since the previous sample. Correlate the timestamp with Unity services, ports, call routing, and application logs.'
+              tags:
+                - tag: component
+                  value: notification
+        - uuid: bbb67b8b2c7f49ceaa7eb3382c2ccade
+          name: 'CUC: message notifications total'
+          type: DEPENDENT
+          key: cuc.notifications.total
+          delay: '0'
+          history: 30d
+          description: 'Cumulative message-notification attempts performed by Unity Connection.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Message Notifications Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Message Notifications Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: notification
+            - tag: scope
+              value: operator
+        - uuid: 07bef1e3f21f444fb8c37ef7fd53026d
+          name: 'CUC: pager notifications failed total'
+          type: DEPENDENT
+          key: cuc.pager_notifications.failed.total
+          delay: '0'
+          history: 30d
+          description: 'Cumulative failed pager-notification attempts. The trigger reacts when this counter increases.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Pager Notifications Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Pager Notifications Failed";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: notification
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 30daa9ddf9f141cb96e20e94c4b7c0da
+              expression: 'change(/Cisco Unity Connection 15 by API/cuc.pager_notifications.failed.total)>0'
+              name: 'CUC recorded new pager-notification failures'
+              priority: WARNING
+              description: 'The cumulative failure counter increased since the previous sample. Correlate the timestamp with Unity services, ports, call routing, and application logs.'
+              tags:
+                - tag: component
+                  value: notification
+        - uuid: 2496a967c6024f43afbc0afc0c54ee4d
+          name: 'CUC: pager notifications total'
+          type: DEPENDENT
+          key: cuc.pager_notifications.total
+          delay: '0'
+          history: 30d
+          description: 'Cumulative pager-notification attempts performed by Unity Connection.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Pager Notifications Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Pager Notifications Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: notification
+            - tag: scope
+              value: operator
+        - uuid: 0778cdf6c41a41ccbe0cd7b2a96a55b6
+          name: 'CUC: active partition utilization'
+          type: DEPENDENT
+          key: cuc.partition.active.used
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          units: '%'
+          description: 'Utilization of the active Cisco VOS software partition. High values can block upgrades, logging, or platform maintenance.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("Partition(Active)");if(p<0)throw "counter not found";var q=value.indexOf("% Used",p);var r=/<[^>]*Value>([^<]+)/.exec(value.slice(q));if(!r)throw "value missing";return Number(r[1]);'
+          master_item:
+            key: cuc.perfmon.partition.raw
+          tags:
+            - tag: component
+              value: storage
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 0ecc2f9e51b24f279c0fc1b1e410d8f1
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.partition.active.used,10m)>{$CUC.PARTITION.WARN} and min(/Cisco Unity Connection 15 by API/cuc.partition.active.used,10m)<={$CUC.PARTITION.HIGH}'
+              name: 'CUC: active partition utilization is elevated'
+              priority: WARNING
+              description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
+              tags:
+                - tag: component
+                  value: storage
+            - uuid: 5a1aa9dccba341e88d1de724abc642dc
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.partition.active.used,10m)>{$CUC.PARTITION.HIGH}'
+              name: 'CUC: active partition utilization is high'
+              priority: HIGH
+              description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
+              tags:
+                - tag: component
+                  value: storage
+        - uuid: 1111110a68554091afb3f5705e8f5f2c
+          name: 'CUC internal: PerfMon CPU session raw/master'
+          type: SCRIPT
+          key: cuc.perfmon.cpu.master
+          delay: '{$CUC.PERFMON.INTERVAL}'
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          params: |
+            var url = '{$CUC.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService',
+                handle = null,
+                closed = false,
+                result = {ok: false, session_closed: false};
+            
+            function call(operation, payload) {
+                var request = new HttpRequest(), response,
+                    body = '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:n="http://schemas.cisco.com/ast/soap"><s:Body><n:' +
+                        operation + '>' + payload + '</n:' + operation + '></s:Body></s:Envelope>';
+                request.addHeader('Content-Type: text/xml');
+                request.addHeader('SOAPAction: ""');
+                request.addHeader('Authorization: Basic ' + btoa('{$CUC.API.USER}:{$CUC.API.PASSWORD}'));
+                response = request.post(url, body);
+                if (request.getStatus() !== 200 || response.indexOf('Fault') >= 0) {
+                    throw operation + ' failed';
+                }
+                return response;
+            }
+            
+            function tag(xml, name) {
+                var match = new RegExp('<[^>]*' + name + '>\\s*([^<]+)').exec(xml);
+                if (!match) throw 'missing ' + name;
+                return match[1];
+            }
+            
+            try {
+                handle = tag(call('perfmonOpenSession', ''), 'perfmonOpenSessionReturn');
+                var counter = '\\\\{$CUC.NODE}\\Processor(_Total)\\% CPU Time';
+                call('perfmonAddCounter', '<n:SessionHandle>' + handle + '</n:SessionHandle><n:ArrayOfCounter><n:Counter><n:Name>' + counter + '</n:Name></n:Counter></n:ArrayOfCounter>');
+                call('perfmonCollectSessionData', '<n:SessionHandle>' + handle + '</n:SessionHandle>');
+                Zabbix.sleep(15000);
+                var sample = call('perfmonCollectSessionData', '<n:SessionHandle>' + handle + '</n:SessionHandle>'),
+                    cpu = Number(tag(sample, 'Value')),
+                    status = Number(tag(sample, 'CStatus'));
+                if (status !== 0 || cpu < 0 || cpu > 100) throw 'invalid CPU sample';
+                result = {ok: true, cpu: cpu, cstatus: status, sample_seconds: 15, session_closed: false};
+            }
+            catch (error) {
+                result = {ok: false, error: String(error), session_closed: false};
+            }
+            finally {
+                if (handle !== null) {
+                    try {
+                        call('perfmonCloseSession', '<n:SessionHandle>' + handle + '</n:SessionHandle>');
+                        closed = true;
+                    }
+                    catch (ignore) {
+                        closed = false;
+                    }
+                }
+                result.session_closed = closed;
+            }
+            return JSON.stringify(result);
+          description: 'Internal transport/master item. Raw API payload for dependent operator items: CPU utilization and CPU collection health. Filter scope=internal; do not use this raw value for incident interpretation.'
+          timeout: 45s
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: 565fce4feb024ce1b66fdee932b58265
+          name: 'CUC internal: PerfMon memory raw/master'
+          type: HTTP_AGENT
+          key: cuc.perfmon.memory.raw
+          delay: '{$CUC.PERFMON.INTERVAL}'
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUC.API.USER}'
+          password: '{$CUC.API.PASSWORD}'
+          description: 'Internal transport/master item. Raw API payload for dependent operator items: memory and swap operator metrics. Filter scope=internal; do not use this raw value for incident interpretation.'
+          timeout: '{$CUC.API.TIMEOUT}'
+          url: '{$CUC.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService'
+          http_proxy: '{$CUC.HTTP.PROXY}'
+          posts: '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://schemas.cisco.com/ast/soap"><soapenv:Body><ns:perfmonCollectCounterData><ns:Host>{$CUC.NODE}</ns:Host><ns:Object>Memory</ns:Object></ns:perfmonCollectCounterData></soapenv:Body></soapenv:Envelope>'
+          headers:
+            - name: Content-Type
+              value: 'text/xml; charset=utf-8'
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: 30324d4c482a4c8493a73c5ebbfdb242
+          name: 'CUC internal: PerfMon network interfaces raw/master'
+          type: HTTP_AGENT
+          key: cuc.perfmon.network.raw
+          delay: '{$CUC.PERFMON.INTERVAL}'
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUC.API.USER}'
+          password: '{$CUC.API.PASSWORD}'
+          description: 'Internal transport/master item. Raw API payload for dependent operator items: network-interface discovery and traffic/drop metrics. Filter scope=internal; do not use this raw value for incident interpretation.'
+          timeout: '{$CUC.API.TIMEOUT}'
+          url: '{$CUC.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService'
+          http_proxy: '{$CUC.HTTP.PROXY}'
+          posts: '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://schemas.cisco.com/ast/soap"><soapenv:Body><ns:perfmonCollectCounterData><ns:Host>{$CUC.NODE}</ns:Host><ns:Object>Network Interface</ns:Object></ns:perfmonCollectCounterData></soapenv:Body></soapenv:Envelope>'
+          headers:
+            - name: Content-Type
+              value: 'text/xml; charset=utf-8'
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: ba829f30e69644c69e30169f1986033e
+          name: 'CUC internal: PerfMon partitions raw/master'
+          type: HTTP_AGENT
+          key: cuc.perfmon.partition.raw
+          delay: '{$CUC.PERFMON.INTERVAL}'
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUC.API.USER}'
+          password: '{$CUC.API.PASSWORD}'
+          description: 'Internal transport/master item. Raw API payload for dependent operator items: partition discovery, capacity, and utilization metrics. Filter scope=internal; do not use this raw value for incident interpretation.'
+          timeout: '{$CUC.API.TIMEOUT}'
+          url: '{$CUC.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService'
+          http_proxy: '{$CUC.HTTP.PROXY}'
+          posts: '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://schemas.cisco.com/ast/soap"><soapenv:Body><ns:perfmonCollectCounterData><ns:Host>{$CUC.NODE}</ns:Host><ns:Object>Partition</ns:Object></ns:perfmonCollectCounterData></soapenv:Body></soapenv:Envelope>'
+          headers:
+            - name: Content-Type
+              value: 'text/xml; charset=utf-8'
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: f82b3459f8784417bc96b8e2eabed3c7
+          name: 'CUC internal: PerfMon phone system raw/master'
+          type: HTTP_AGENT
+          key: cuc.perfmon.phone_system.raw
+          delay: '{$CUC.PERFMON.INTERVAL}'
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUC.API.USER}'
+          password: '{$CUC.API.PASSWORD}'
+          description: 'Internal transport/master item. Raw API payload for dependent operator items: calls, voice-port, MWI, notification, and transfer metrics. Filter scope=internal; do not use this raw value for incident interpretation.'
+          timeout: '{$CUC.API.TIMEOUT}'
+          url: '{$CUC.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService'
+          http_proxy: '{$CUC.HTTP.PROXY}'
+          posts: '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://schemas.cisco.com/ast/soap"><soapenv:Body><ns:perfmonCollectCounterData><ns:Host>{$CUC.NODE}</ns:Host><ns:Object>CUC Phone System</ns:Object></ns:perfmonCollectCounterData></soapenv:Body></soapenv:Envelope>'
+          headers:
+            - name: Content-Type
+              value: 'text/xml; charset=utf-8'
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: 1758c52acfc840d7a44a5b18d8c79c33
+          name: 'CUC internal: PerfMon system raw/master'
+          type: HTTP_AGENT
+          key: cuc.perfmon.system.raw
+          delay: '{$CUC.PERFMON.INTERVAL}'
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUC.API.USER}'
+          password: '{$CUC.API.PASSWORD}'
+          description: 'Internal transport/master item. Raw API payload for dependent operator items: uptime, process, thread, and disk-I/O metrics. Filter scope=internal; do not use this raw value for incident interpretation.'
+          timeout: '{$CUC.API.TIMEOUT}'
+          url: '{$CUC.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService'
+          http_proxy: '{$CUC.HTTP.PROXY}'
+          posts: '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://schemas.cisco.com/ast/soap"><soapenv:Body><ns:perfmonCollectCounterData><ns:Host>{$CUC.NODE}</ns:Host><ns:Object>System</ns:Object></ns:perfmonCollectCounterData></soapenv:Body></soapenv:Envelope>'
+          headers:
+            - name: Content-Type
+              value: 'text/xml; charset=utf-8'
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: 38ee1d6db006488ab0ee153fa9b0678e
+          name: 'CUC internal: PerfMon voice sessions raw/master'
+          type: HTTP_AGENT
+          key: cuc.perfmon.voice_sessions.raw
+          delay: '{$CUC.PERFMON.INTERVAL}'
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUC.API.USER}'
+          password: '{$CUC.API.PASSWORD}'
+          description: 'Internal transport/master item. Raw API payload for dependent operator items: voice-session, failsafe, and greeting-delay metrics. Filter scope=internal; do not use this raw value for incident interpretation.'
+          timeout: '{$CUC.API.TIMEOUT}'
+          url: '{$CUC.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService'
+          http_proxy: '{$CUC.HTTP.PROXY}'
+          posts: '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://schemas.cisco.com/ast/soap"><soapenv:Body><ns:perfmonCollectCounterData><ns:Host>{$CUC.NODE}</ns:Host><ns:Object>CUC Sessions: Voice</ns:Object></ns:perfmonCollectCounterData></soapenv:Body></soapenv:Envelope>'
+          headers:
+            - name: Content-Type
+              value: 'text/xml; charset=utf-8'
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: d8aba69c952b43c7a80042a7916afba9
+          name: 'CUC: configured phone systems'
+          type: DEPENDENT
+          key: cuc.phone_systems.total
+          delay: '0'
+          history: 30d
+          value_type: FLOAT
+          description: 'Number of configured Unity Connection phone-system integrations returned by VMREST.'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.phone_systems
+          master_item:
+            key: cuc.vmrest.inventory.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: cf18df5e9daf49449cd0d32867e18098
+              expression: '{$CUC.TELEPHONY.REQUIRED}=1 and last(/Cisco Unity Connection 15 by API/cuc.phone_systems.total)=0'
+              name: 'CUC has no configured phone system'
+              priority: HIGH
+              description: 'Telephony monitoring is required but VMREST reports no phone-system integration. Configure the CUC phone system or set {$CUC.TELEPHONY.REQUIRED}=0 for an intentionally non-telephony lab.'
+              tags:
+                - tag: component
+                  value: telephony
+        - uuid: 37cf431c26d24f0a8b9829bd369b368f
+          name: 'CUC: voice ports idle'
+          type: DEPENDENT
+          key: cuc.ports.idle.current
+          delay: '0'
+          history: 30d
+          units: ports
+          description: 'Voice ports currently idle and available to accept calls.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Ports Idle Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Ports Idle Current";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+        - uuid: ad0dd7ed8f724524b469217e990b66f0
+          name: 'CUC: voice ports in use'
+          type: DEPENDENT
+          key: cuc.ports.in_use.current
+          delay: '0'
+          history: 30d
+          units: ports
+          description: 'Voice ports currently handling calls or other telephony work.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Ports In Use Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Ports In Use Current";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+        - uuid: 9ff11a5db3944e8ab929592cc29723a6
+          name: 'CUC: voice ports locked'
+          type: DEPENDENT
+          key: cuc.ports.locked.current
+          delay: '0'
+          history: 30d
+          units: ports
+          description: 'Voice ports currently locked and unavailable. A sustained value above zero raises a high-severity problem.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Ports Locked",p=value.indexOf(marker);if(p<0)throw "counter absent: Ports Locked";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 36a5e4ebc3c24ad9918ee98bec82c4b3
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.ports.locked.current,5m)>0'
+              name: 'CUC has locked voice ports'
+              priority: HIGH
+              description: 'At least one Unity voice port remained locked for five minutes. Check port status, telephony integration, and Conversation Manager health.'
+              tags:
+                - tag: component
+                  value: telephony
+        - uuid: ec81dc2246214a03a684c58ed764604a
+          name: 'CUC: configured voice ports'
+          type: DEPENDENT
+          key: cuc.ports.total
+          delay: '0'
+          history: 30d
+          value_type: FLOAT
+          description: 'Number of configured Unity Connection voice ports returned by VMREST inventory.'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.ports
+          master_item:
+            key: cuc.vmrest.inventory.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+        - uuid: 7eb3de179f3c4108bf1176333b0b6af0
+          name: 'CUC: voice-port utilization'
+          type: DEPENDENT
+          key: cuc.ports.util
+          delay: '0'
+          history: 30d
+          value_type: FLOAT
+          units: '%'
+          description: 'Percentage of available voice ports currently in use, calculated as in-use divided by in-use plus idle ports.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  function counter(name){var marker="\\{$CUC.NODE}\\CUC Phone System\\"+name,p=value.indexOf(marker);if(p<0)throw "counter absent: "+name;var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "value absent: "+name;return Number(r[1]);}
+                  var used=counter("Ports In Use Current"),idle=counter("Ports Idle Current"),total=used+idle;if(total<=0)return 0;return used*100/total;
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 6d4680bab7dd4d9da94ab8c811d9d8b7
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.ports.util,5m)>{$CUC.PORTS.WARN} and min(/Cisco Unity Connection 15 by API/cuc.ports.util,5m)<={$CUC.PORTS.HIGH}'
+              name: 'CUC voice-port utilization is elevated'
+              priority: WARNING
+              description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
+              tags:
+                - tag: component
+                  value: telephony
+            - uuid: 6fe87b1ab27240568bb0c397ef44e172
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.ports.util,5m)>{$CUC.PORTS.HIGH}'
+              name: 'CUC voice-port utilization is high'
+              priority: HIGH
+              description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
+              tags:
+                - tag: component
+                  value: telephony
+        - uuid: 240d6d41ed35470ebc5d26f15ead14f3
+          name: 'CUC: configured port groups'
+          type: DEPENDENT
+          key: cuc.port_groups.total
+          delay: '0'
+          history: 30d
+          value_type: FLOAT
+          description: 'Number of configured telephony port groups returned by VMREST.'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.port_groups
+          master_item:
+            key: cuc.vmrest.inventory.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+        - uuid: 78e61d632c5c417aa00a5e397225dbf9
+          name: 'CUC: swap utilization'
+          type: DEPENDENT
+          key: cuc.swap.util
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          units: '%'
+          description: 'Percentage of configured swap space currently in use on Cisco VOS.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("Total Swap KBytes");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(value.slice(p));if(!r||Number(r[2])!==1)throw "invalid total swap counter";var t=Number(r[1]);p=value.indexOf("Used Swap KBytes");r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(value.slice(p));if(!r||Number(r[2])!==1||!isFinite(t)||t<=0)throw "invalid used swap counter";var u=Number(r[1]);if(!isFinite(u)||u<0||u>t)throw "invalid swap value";return u*100/t;'
+          master_item:
+            key: cuc.perfmon.memory.raw
+          tags:
+            - tag: component
+              value: memory
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 7ab6c3db65e54e0a8d4ba3309596d6be
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.swap.util,10m)>={$CUC.SWAP.HIGH} and min(/Cisco Unity Connection 15 by API/cuc.memory.util,10m)>={$CUC.SWAP.MEMORY.MIN}'
+              name: 'CUC: swap utilization is high'
+              opdata: 'Swap: {ITEM.LASTVALUE1}; memory: {ITEM.LASTVALUE2}'
+              priority: HIGH
+              description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
+              tags:
+                - tag: component
+                  value: memory
+        - uuid: 711103cae91a4aa2840119d9b50aef57
+          name: 'CUC: disk IOPS'
+          type: DEPENDENT
+          key: cuc.system.disk.iops
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          units: iops
+          description: 'Aggregate disk operations per second reported by the Cisco VOS System PerfMon object.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("IOPerSecond");if(p<0)throw "counter not found";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value missing";return Number(r[1]);'
+          master_item:
+            key: cuc.perfmon.system.raw
+          tags:
+            - tag: component
+              value: storage
+            - tag: scope
+              value: operator
+        - uuid: e1c3e0591abc4562a352cd4c21ddaf91
+          name: 'CUC: system process count'
+          type: DEPENDENT
+          key: cuc.system.processes
+          delay: '0'
+          history: 7d
+          description: 'Current number of operating-system processes reported by Cisco VOS PerfMon.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("Total Processes");if(p<0)throw "counter not found";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value missing";return Number(r[1]);'
+          master_item:
+            key: cuc.perfmon.system.raw
+          tags:
+            - tag: component
+              value: system
+            - tag: scope
+              value: operator
+        - uuid: f91f30af0864455fbd9e76c20645d448
+          name: 'CUC: system thread count'
+          type: DEPENDENT
+          key: cuc.system.threads
+          delay: '0'
+          history: 7d
+          description: 'Current number of operating-system threads reported by Cisco VOS PerfMon.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("Total Threads");if(p<0)throw "counter not found";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value missing";return Number(r[1]);'
+          master_item:
+            key: cuc.perfmon.system.raw
+          tags:
+            - tag: component
+              value: system
+            - tag: scope
+              value: operator
+        - uuid: 1f3892a54e04429ab11dff8872098767
+          name: 'CUC: system uptime'
+          type: DEPENDENT
+          key: cuc.system.uptime
+          delay: '0'
+          history: 7d
+          units: uptime
+          description: 'Time since the Unity Connection node last started.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("Total CPU Time");if(p<0)throw "counter not found";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value missing";return Number(r[1])*0.01;'
+          master_item:
+            key: cuc.perfmon.system.raw
+          tags:
+            - tag: component
+              value: system
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 4e81690edf2e42eb937ce1eb5db2c5ac
+              expression: 'last(/Cisco Unity Connection 15 by API/cuc.system.uptime)<600 and last(/Cisco Unity Connection 15 by API/cuc.system.uptime)>0'
+              name: 'CUC: node was restarted recently'
+              priority: WARNING
+              description: 'Node uptime is below the configured recent-restart window. Confirm whether the restart was planned and verify all critical services.'
+              tags:
+                - tag: component
+                  value: system
+        - uuid: ed146d5f23e84feda6d75833dd90d304
+          name: 'CUC: release transfers failed total'
+          type: DEPENDENT
+          key: cuc.transfers.release.failed.total
+          delay: '0'
+          history: 30d
+          description: 'Cumulative failed release-transfer attempts. The trigger reacts when this counter increases.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Outgoing Calls Release Transfers Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Outgoing Calls Release Transfers Failed";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: c7bef5cc83724f2db1370deeb6780939
+              expression: 'change(/Cisco Unity Connection 15 by API/cuc.transfers.release.failed.total)>0'
+              name: 'CUC recorded new release-transfer failures'
+              priority: WARNING
+              description: 'The cumulative failure counter increased since the previous sample. Correlate the timestamp with Unity services, ports, call routing, and application logs.'
+              tags:
+                - tag: component
+                  value: telephony
+        - uuid: fbdd0ead655c48fb814c155ff4a4751e
+          name: 'CUC: supervised transfers dropped total'
+          type: DEPENDENT
+          key: cuc.transfers.supervised.dropped.total
+          delay: '0'
+          history: 30d
+          description: 'Cumulative supervised transfers that were dropped. The trigger reacts when this counter increases.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Outgoing Calls Supervised Transfers Dropped",p=value.indexOf(marker);if(p<0)throw "counter absent: Outgoing Calls Supervised Transfers Dropped";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 1ac9c298560d4bf18a7cc8417a50f99c
+              expression: 'change(/Cisco Unity Connection 15 by API/cuc.transfers.supervised.dropped.total)>0'
+              name: 'CUC recorded new supervised-transfer drops'
+              priority: WARNING
+              description: 'The cumulative failure counter increased since the previous sample. Correlate the timestamp with Unity services, ports, call routing, and application logs.'
+              tags:
+                - tag: component
+                  value: telephony
+        - uuid: f7f966064c0043128242d8bc2febca35
+          name: 'CUC: supervised transfers failed total'
+          type: DEPENDENT
+          key: cuc.transfers.supervised.failed.total
+          delay: '0'
+          history: 30d
+          description: 'Cumulative failed supervised-transfer attempts. The trigger reacts when this counter increases.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Outgoing Calls Supervised Transfers Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Outgoing Calls Supervised Transfers Failed";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.phone_system.raw
+          tags:
+            - tag: component
+              value: telephony
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: f795b7a32b944763a88eff186a8eaa1f
+              expression: 'change(/Cisco Unity Connection 15 by API/cuc.transfers.supervised.failed.total)>0'
+              name: 'CUC recorded new supervised-transfer failures'
+              priority: WARNING
+              description: 'The cumulative failure counter increased since the previous sample. Correlate the timestamp with Unity services, ports, call routing, and application logs.'
+              tags:
+                - tag: component
+                  value: telephony
+        - uuid: aa11e4f4d2ec4c04a90589dc673a27ef
+          name: 'CUC: configured users'
+          type: DEPENDENT
+          key: cuc.users.total
+          delay: '0'
+          history: 30d
+          value_type: FLOAT
+          description: 'Number of configured Unity Connection users returned by VMREST inventory, including applicable system users.'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.users
+          master_item:
+            key: cuc.vmrest.inventory.raw
+          tags:
+            - tag: component
+              value: capacity
+            - tag: scope
+              value: operator
+        - uuid: 02b64fdf8842463cb27bd80296065131
+          name: 'CUC: software version'
+          type: DEPENDENT
+          key: cuc.version
+          delay: '0'
+          history: 7d
+          value_type: CHAR
+          trends: '0'
+          description: 'Installed Unity Connection software version returned by the VMREST version endpoint.'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.version
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1d
+          master_item:
+            key: cuc.vmrest.inventory.raw
+          tags:
+            - tag: component
+              value: inventory
+            - tag: scope
+              value: operator
+        - uuid: 5b02ba522e9f4a09b32956ee05a4612a
+          name: 'CUC internal: VMREST inventory raw/master'
+          type: SCRIPT
+          key: cuc.vmrest.inventory.raw
+          delay: '{$CUC.INVENTORY.INTERVAL}'
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          params: |
+            var p = JSON.parse(value), started = Date.now(), result = {
+                available: 0,
+                version: '',
+                users: -1,
+                ports: -1,
+                port_groups: -1,
+                phone_systems: -1,
+                nodes: -1,
+                response_time_ms: 0,
+                error: ''
+            };
+            
+            function request(path) {
+                var q = new HttpRequest(), body, status;
+                q.setHttpAuth(HTTPAUTH_BASIC, p.username, p.password);
+                q.addHeader('Accept: application/json, application/xml;q=0.9, text/xml;q=0.8');
+                    q.addHeader('Content-Type: application/xml');
+                body = q.get(p.url + path);
+                status = q.getStatus();
+                if (status < 200 || status >= 300) {
+                    throw path + ' returned HTTP ' + status;
+                }
+                return body;
+            }
+            
+            function total(body) {
+                var data, keys, i, match;
+                try {
+                    data = JSON.parse(body);
+                    keys = Object.keys(data);
+                    for (i = 0; i < keys.length; i++) {
+                        if (/^(@?total|totalRows)$/i.test(keys[i])) {
+                            return Number(data[keys[i]]);
+                        }
+                        if (data[keys[i]] && typeof data[keys[i]] === 'object') {
+                            match = JSON.stringify(data[keys[i]]).match(/\"(?:@?total|totalRows)\"\s*:\s*\"?(\d+)/i);
+                            if (match) return Number(match[1]);
+                        }
+                    }
+                }
+                catch (ignore) {}
+                match = body.match(/\btotal=[\"'](\d+)[\"']/i);
+                if (!match) throw 'total attribute missing';
+                return Number(match[1]);
+            }
+            
+            function version(body) {
+                var data, match;
+                try {
+                    data = JSON.parse(body);
+                    match = JSON.stringify(data).match(/\"(?:version|Version)\"\s*:\s*\"([^\"]+)/);
+                    if (match) return match[1];
+                }
+                catch (ignore) {}
+                match = body.match(/<(?:Version|version)>\s*([^<]+)/);
+                return match ? match[1] : body.replace(/^\s+|\s+$/g, '').slice(0, 128);
+            }
+            
+            try {
+                result.version = version(request('/vmrest/version'));
+                result.users = total(request('/vmrest/users?rowsPerPage=1'));
+                result.ports = total(request('/vmrest/ports?rowsPerPage=1'));
+                result.port_groups = total(request('/vmrest/portgroups?rowsPerPage=1'));
+                result.phone_systems = total(request('/vmrest/phonesystems?rowsPerPage=1'));
+                result.nodes = total(request('/vmrest/vmsservers?rowsPerPage=1'));
+                result.available = 1;
+            }
+            catch (e) {
+                result.error = String(e);
+            }
+            result.response_time_ms = Date.now() - started;
+            return JSON.stringify(result);
+          description: 'Internal transport/master item. Raw API payload for dependent operator items: software version and configuration inventory counts. Filter scope=internal; do not use this raw value for incident interpretation.'
+          timeout: '{$CUC.INVENTORY.TIMEOUT}'
+          parameters:
+            - name: password
+              value: '{$CUC.API.PASSWORD}'
+            - name: url
+              value: '{$CUC.URL}'
+            - name: username
+              value: '{$CUC.API.USER}'
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: c84f058432704639a63d9b2ea20b1a52
+          name: 'CUC: failsafe conversations total'
+          type: DEPENDENT
+          key: cuc.voice.failsafes.total
+          delay: '0'
+          history: 30d
+          description: 'Cumulative voice conversations that entered the Unity failsafe path. Any increase should be investigated.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Sessions: Voice\\Failsafes Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Failsafes Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.voice_sessions.raw
+          tags:
+            - tag: component
+              value: voice
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 5ce28d70033e423a9440d198b18b508a
+              expression: 'change(/Cisco Unity Connection 15 by API/cuc.voice.failsafes.total)>0'
+              name: 'CUC entered a new failsafe conversation'
+              priority: AVERAGE
+              description: 'The cumulative failure counter increased since the previous sample. Correlate the timestamp with Unity services, ports, call routing, and application logs.'
+              tags:
+                - tag: component
+                  value: voice
+        - uuid: 1733fbf006804fe1b08e77d0e97137b0
+          name: 'CUC: opening greeting delay'
+          type: DEPENDENT
+          key: cuc.voice.opening_greeting.delay
+          delay: '0'
+          history: 30d
+          value_type: FLOAT
+          units: ms
+          description: 'Current opening-greeting processing delay reported by the CUC Sessions: Voice PerfMon object.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Sessions: Voice\\Delay - Opening Greeting [ms]",p=value.indexOf(marker);if(p<0)throw "counter absent: Delay - Opening Greeting [ms]";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.voice_sessions.raw
+          tags:
+            - tag: component
+              value: voice
+            - tag: scope
+              value: operator
+        - uuid: 511c8739060440bab6561394cf4d23e6
+          name: 'CUC: voice sessions current'
+          type: DEPENDENT
+          key: cuc.voice.sessions.current
+          delay: '0'
+          history: 30d
+          units: sessions
+          description: 'Voice sessions currently active in Unity Connection.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Sessions: Voice\\Sessions Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Sessions Current";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.voice_sessions.raw
+          tags:
+            - tag: component
+              value: voice
+            - tag: scope
+              value: operator
+      discovery_rules:
+        - uuid: 4256342152e8406ca1569e563e9cd990
+          name: 'CUC: identity certificate discovery'
+          type: DEPENDENT
+          key: cuc.certificate.discovery
+          delay: '0'
+          description: 'Discovers identity certificates from the supported Cisco VOS Certificate Management snapshot API and creates expiry and identity metadata items.'
+          item_prototypes:
+            - uuid: 558422e528904544a5cf264c69b27d9b
+              name: 'CUC: certificate {#CERT.NAME}: days until expiry'
+              type: DEPENDENT
+              key: 'cuc.certificate.days[{#CERT.NAME}]'
+              delay: '0'
+              description: 'Whole days remaining until the discovered identity certificate expires. Negative values mean the certificate has expired.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x)throw ''certificate absent'';var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++){if(a[i].indexOf(''---'')!==0&&a[i].length)s+=new TextDecoder().decode(atob(a[i]));}var m=s.match(/(\d{12})[\s\S]*(\d{12})/);if(!m)throw ''expiry not found'';var z=m[2],y=2000+Number(z.slice(0,2)),mo=Number(z.slice(2,4))-1,da=Number(z.slice(4,6)),h=Number(z.slice(6,8)),mi=Number(z.slice(8,10)),se=Number(z.slice(10,12));return Math.floor((Date.UTC(y,mo,da,h,mi,se)-Date.now())/86400000);'
+              master_item:
+                key: cuc.certificate.snapshot.raw
+              tags:
+                - tag: scope
+                  value: operator
+              trigger_prototypes:
+                - uuid: b17d2b6189224a5f9e13cc310dc8fc43
+                  expression: 'last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])<{$CUC.CERT.WARN} and last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])>={$CUC.CERT.HIGH}'
+                  name: 'CUC certificate {#CERT.NAME} expires soon'
+                  priority: WARNING
+                  description: 'The discovered identity certificate crossed this expiry threshold. Renew or replace it and validate dependent services before expiration.'
+                  tags:
+                    - tag: component
+                      value: certificate
+                - uuid: 3a1cbf23562e43d99ee6195efa159fbb
+                  expression: 'last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])<{$CUC.CERT.DISASTER} and last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])>=0'
+                  name: 'CUC certificate {#CERT.NAME} expires within 7 days'
+                  priority: HIGH
+                  description: 'The discovered identity certificate crossed this expiry threshold. Renew or replace it and validate dependent services before expiration.'
+                  tags:
+                    - tag: component
+                      value: certificate
+                - uuid: 3f89d6198265433797f537871daac781
+                  expression: 'last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])<{$CUC.CERT.HIGH} and last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])>={$CUC.CERT.DISASTER}'
+                  name: 'CUC certificate {#CERT.NAME} expires within 30 days'
+                  priority: AVERAGE
+                  description: 'The discovered identity certificate crossed this expiry threshold. Renew or replace it and validate dependent services before expiration.'
+                  tags:
+                    - tag: component
+                      value: certificate
+                - uuid: 79416ffb47e64d1381591195e8e63987
+                  expression: 'last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])<{$CUC.CERT.INFO} and last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])>={$CUC.CERT.WARN}'
+                  name: 'CUC certificate {#CERT.NAME} expires within 90 days'
+                  priority: INFO
+                  description: 'The discovered identity certificate crossed this expiry threshold. Renew or replace it and validate dependent services before expiration.'
+                  tags:
+                    - tag: component
+                      value: certificate
+                - uuid: f69b51ae52e74f55be20a85e8a379457
+                  expression: 'last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])<0'
+                  name: 'CUC certificate {#CERT.NAME} has expired'
+                  priority: DISASTER
+                  description: 'The discovered identity certificate crossed this expiry threshold. Renew or replace it and validate dependent services before expiration.'
+                  tags:
+                    - tag: component
+                      value: certificate
+            - uuid: 3d6962fe647b4ae68afbba424412a5e2
+              name: 'CUC: certificate {#CERT.NAME}: issuer'
+              type: DEPENDENT
+              key: 'cuc.certificate.issuer[{#CERT.NAME}]'
+              delay: '0'
+              value_type: TEXT
+              trends: '0'
+              description: 'Issuer distinguished name of the discovered identity certificate.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x)throw ''certificate absent'';var s='''',a=x.certificate.split(''\n'');for(var i=0;i<a.length;i++)if(a[i].indexOf(''---'')!==0&&a[i].length)s+=a[i];var b=atob(s);function t(p){var q=p+1,n=b[q++];if(n&128){var z=n&127;n=0;while(z--)n=n*256+b[q++];}return {t:b[p],v:q,e:q+n};}function o(n){var q=n.v,v=b[q++],r=v<40?0:Math.floor(v/40),z=v<40?v: v-r*40,a=[r,z];while(q<n.e){v=0;do{z=b[q++];v=v*128+(z&127);}while(z&128);a.push(v);}return a.join(''.'');}function v(n){var s='''';for(var q=n.v;q<n.e;q++)s+=String.fromCharCode(b[q]);return s;}function name(n){var q=n.v,a=[];while(q<n.e){var r=t(q);q=r.e;var p=r.v;while(p<r.e){var e=t(p);p=e.e;var k=t(e.v),w=t(k.e),m={''2.5.4.3'':''CN'',''2.5.4.6'':''C'',''2.5.4.7'':''L'',''2.5.4.8'':''ST'',''2.5.4.10'':''O'',''2.5.4.11'':''OU''};a.push((m[o(k)]||o(k))+''=''+v(w));}}return a.join('', '');}var c=t(0),q=t(c.v),p=q.v,e=t(p);if(e.t===160)p=e.e;p=t(p).e;p=t(p).e;return name(t(p));'
+              master_item:
+                key: cuc.certificate.snapshot.raw
+              tags:
+                - tag: scope
+                  value: operator
+            - uuid: 27f320e8fad942dab70cfe51fd85baa9
+              name: 'CUC: certificate {#CERT.NAME}: expiry raw date'
+              type: DEPENDENT
+              key: 'cuc.certificate.rawdate[{#CERT.NAME}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              description: 'Certificate expiry timestamp as returned by the Cisco VOS Certificate Management API.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++){if(a[i].indexOf(''---'')!==0&&a[i].length)s+=new TextDecoder().decode(atob(a[i]));}var m=s.match(/(\d{12})[\s\S]*(\d{12})/);if(!m)throw ''expiry absent'';return m[2];'
+              master_item:
+                key: cuc.certificate.snapshot.raw
+              tags:
+                - tag: scope
+                  value: operator
+            - uuid: ac5f09d86caf4b39bd1bc110ae5d1ed2
+              name: 'CUC: certificate {#CERT.NAME}: subject'
+              type: DEPENDENT
+              key: 'cuc.certificate.subject[{#CERT.NAME}]'
+              delay: '0'
+              value_type: TEXT
+              trends: '0'
+              description: 'Subject distinguished name of the discovered identity certificate.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x)throw ''certificate absent'';var s='''',a=x.certificate.split(''\n'');for(var i=0;i<a.length;i++)if(a[i].indexOf(''---'')!==0&&a[i].length)s+=a[i];var b=atob(s);function t(p){var q=p+1,n=b[q++];if(n&128){var z=n&127;n=0;while(z--)n=n*256+b[q++];}return {t:b[p],v:q,e:q+n};}function o(n){var q=n.v,v=b[q++],r=v<40?0:Math.floor(v/40),z=v<40?v: v-r*40,a=[r,z];while(q<n.e){v=0;do{z=b[q++];v=v*128+(z&127);}while(z&128);a.push(v);}return a.join(''.'');}function v(n){var s='''';for(var q=n.v;q<n.e;q++)s+=String.fromCharCode(b[q]);return s;}function name(n){var q=n.v,a=[];while(q<n.e){var r=t(q);q=r.e;var p=r.v;while(p<r.e){var e=t(p);p=e.e;var k=t(e.v),w=t(k.e),m={''2.5.4.3'':''CN'',''2.5.4.6'':''C'',''2.5.4.7'':''L'',''2.5.4.8'':''ST'',''2.5.4.10'':''O'',''2.5.4.11'':''OU''};a.push((m[o(k)]||o(k))+''=''+v(w));}}return a.join('', '');}var c=t(0),q=t(c.v),p=q.v,e=t(p);if(e.t===160)p=e.e;p=t(p).e;p=t(p).e;p=t(p).e;p=t(p).e;return name(t(p));'
+              master_item:
+                key: cuc.certificate.snapshot.raw
+              tags:
+                - tag: scope
+                  value: operator
+          master_item:
+            key: cuc.certificate.snapshot.raw
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var d=JSON.parse(value),a=[],seen={};if(!d.identities||!d.identities.length)throw ''no identity certificates'';d.identities.forEach(function(x){if(x.service&&x.certificate&&!seen[x.service]){seen[x.service]=1;a.push({''{#CERT.NAME}'':x.service});}});return JSON.stringify({data:a});'
+        - uuid: 61ccc18837964b5095ba001f256d9785
+          name: 'CUC: network interface discovery'
+          type: DEPENDENT
+          key: cuc.network.discovery
+          delay: '0'
+          description: 'Discovers active Cisco VOS network-interface instances from PerfMon and creates traffic and packet-drop metrics per interface.'
+          item_prototypes:
+            - uuid: 5297de2baa674529b25493940476f4bb
+              name: 'CUC: interface {#IF.NAME}: inbound bits/s'
+              type: DEPENDENT
+              key: 'cuc.network.in.bits[{#IF.NAME}]'
+              delay: '0'
+              value_type: FLOAT
+              units: bps
+              description: 'Inbound traffic rate on the discovered Cisco VOS network interface.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var marker="Network Interface({#IF.NAME})\\Rx Bytes",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);'
+                - type: CHANGE_PER_SECOND
+                  parameters:
+                    - ''
+                - type: MULTIPLIER
+                  parameters:
+                    - '8'
+              master_item:
+                key: cuc.perfmon.network.raw
+              tags:
+                - tag: component
+                  value: network
+                - tag: scope
+                  value: operator
+            - uuid: d0cdc79c345141018aa2b56f4f1ce2ce
+              name: 'CUC: interface {#IF.NAME}: inbound dropped packets delta'
+              type: DEPENDENT
+              key: 'cuc.network.in.dropped[{#IF.NAME}]'
+              delay: '0'
+              value_type: FLOAT
+              description: 'Increase in inbound dropped packets on the discovered interface during the polling interval.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var marker="Network Interface({#IF.NAME})\\Rx Dropped",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);'
+                - type: SIMPLE_CHANGE
+                  parameters:
+                    - ''
+              master_item:
+                key: cuc.perfmon.network.raw
+              tags:
+                - tag: component
+                  value: network
+                - tag: scope
+                  value: operator
+            - uuid: ed875907f61c49668ad106a8c3b6a073
+              name: 'CUC: interface {#IF.NAME}: outbound bits/s'
+              type: DEPENDENT
+              key: 'cuc.network.out.bits[{#IF.NAME}]'
+              delay: '0'
+              value_type: FLOAT
+              units: bps
+              description: 'Outbound traffic rate on the discovered Cisco VOS network interface.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var marker="Network Interface({#IF.NAME})\\Tx Bytes",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);'
+                - type: CHANGE_PER_SECOND
+                  parameters:
+                    - ''
+                - type: MULTIPLIER
+                  parameters:
+                    - '8'
+              master_item:
+                key: cuc.perfmon.network.raw
+              tags:
+                - tag: component
+                  value: network
+                - tag: scope
+                  value: operator
+            - uuid: 74ae3c48281a433ba28fb90509aba930
+              name: 'CUC: interface {#IF.NAME}: outbound dropped packets delta'
+              type: DEPENDENT
+              key: 'cuc.network.out.dropped[{#IF.NAME}]'
+              delay: '0'
+              value_type: FLOAT
+              description: 'Increase in outbound dropped packets on the discovered interface during the polling interval.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var marker="Network Interface({#IF.NAME})\\Tx Dropped",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);'
+                - type: SIMPLE_CHANGE
+                  parameters:
+                    - ''
+              master_item:
+                key: cuc.perfmon.network.raw
+              tags:
+                - tag: component
+                  value: network
+                - tag: scope
+                  value: operator
+          master_item:
+            key: cuc.perfmon.network.raw
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  var data = [], seen = {}, match,
+                      exclude = new RegExp('{$CUC.INTERFACES.NOT_TO_DISCOVER}'),
+                      pattern = /<[^>]*Name>[^<]*Network Interface\(([^)]+)\)\\Rx Bytes<\/[^>]*Name>/g;
+                  while ((match = pattern.exec(value)) !== null) {
+                      if (!seen[match[1]] && !exclude.test(match[1])) {
+                          seen[match[1]] = true;
+                          data.push({"{#IF.NAME}": match[1]});
+                      }
+                  }
+                  if (!data.length) throw "no network interfaces";
+                  return JSON.stringify({data: data});
+        - uuid: 4e3e24bb4ed54831bb22b9aa4aeea440
+          name: 'CUC: partition discovery'
+          type: DEPENDENT
+          key: cuc.partition.discovery
+          delay: '0'
+          description: 'Discovers Cisco VOS disk partitions from PerfMon and creates capacity and utilization metrics per partition.'
+          item_prototypes:
+            - uuid: ae5db2d985634bc58705917028f6a22c
+              name: 'CUC: partition {#PARTITION}: total space'
+              type: DEPENDENT
+              key: 'cuc.partition.total.bytes[{#PARTITION}]'
+              delay: '0'
+              value_type: FLOAT
+              units: B
+              description: 'Total capacity of the discovered Cisco VOS partition.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - |
+                      var marker="Partition({#PARTITION})\\Total Mbytes",p=value.indexOf(marker);
+                      if(p<0)throw "counter absent";
+                      var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1])*1048576;
+              master_item:
+                key: cuc.perfmon.partition.raw
+              tags:
+                - tag: component
+                  value: storage
+                - tag: scope
+                  value: operator
+            - uuid: 7f50e6d30dcf439a906f117d6fd286e0
+              name: 'CUC: partition {#PARTITION}: used space'
+              type: DEPENDENT
+              key: 'cuc.partition.used.bytes[{#PARTITION}]'
+              delay: '0'
+              value_type: FLOAT
+              units: B
+              description: 'Used capacity of the discovered Cisco VOS partition.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - |
+                      var marker="Partition({#PARTITION})\\Used Mbytes",p=value.indexOf(marker);
+                      if(p<0)throw "counter absent";
+                      var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1])*1048576;
+              master_item:
+                key: cuc.perfmon.partition.raw
+              tags:
+                - tag: component
+                  value: storage
+                - tag: scope
+                  value: operator
+            - uuid: c4320ea265604d61a591d620188a2990
+              name: 'CUC: partition {#PARTITION}: utilization'
+              type: DEPENDENT
+              key: 'cuc.partition.used[{#PARTITION}]'
+              delay: '0'
+              value_type: FLOAT
+              units: '%'
+              description: 'Percentage of the discovered Cisco VOS partition currently in use.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - |
+                      var marker="Partition({#PARTITION})\\% Used",p=value.indexOf(marker);
+                      if(p<0)throw "counter absent";
+                      var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);
+              master_item:
+                key: cuc.perfmon.partition.raw
+              tags:
+                - tag: component
+                  value: storage
+                - tag: scope
+                  value: operator
+              trigger_prototypes:
+                - uuid: f020e0f7f5bf478eb91babe62528d3ad
+                  expression: 'min(/Cisco Unity Connection 15 by API/cuc.partition.used[{#PARTITION}],10m)>{$CUC.PARTITION.WARN} and min(/Cisco Unity Connection 15 by API/cuc.partition.used[{#PARTITION}],10m)<={$CUC.PARTITION.HIGH}'
+                  name: 'CUC partition {#PARTITION} utilization is elevated'
+                  priority: WARNING
+                  description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
+                  tags:
+                    - tag: component
+                      value: storage
+                - uuid: 987d9d7b0007444b9f7736eccf4157e0
+                  expression: 'min(/Cisco Unity Connection 15 by API/cuc.partition.used[{#PARTITION}],10m)>{$CUC.PARTITION.HIGH}'
+                  name: 'CUC partition {#PARTITION} utilization is high'
+                  priority: HIGH
+                  description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
+                  tags:
+                    - tag: component
+                      value: storage
+          master_item:
+            key: cuc.perfmon.partition.raw
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  var data = [], seen = {}, match,
+                      exclude = new RegExp('{$CUC.PARTITIONS.NOT_TO_DISCOVER}'),
+                      pattern = /<[^>]*Name>[^<]*Partition\(([^)]+)\)\\% Used<\/[^>]*Name>/g;
+                  while ((match = pattern.exec(value)) !== null) {
+                      if (!seen[match[1]] && !exclude.test(match[1])) {
+                          seen[match[1]] = true;
+                          data.push({"{#PARTITION}": match[1]});
+                      }
+                  }
+                  if (!data.length) throw "no partitions";
+                  return JSON.stringify({data: data});
+        - uuid: b82e2a3a99244cb1b36cd2081513fbff
+          name: 'CUC: critical service discovery'
+          type: DEPENDENT
+          key: cuc.service.discovery
+          delay: '0'
+          description: 'Discovers the configured critical Unity/VOS services from the ControlCenter response and creates state, uptime, and reason items per service.'
+          item_prototypes:
+            - uuid: d31eca39e7bf4836b2e18486b7cd9fdb
+              name: 'CUC: service {#SERVICE.NAME}: reason'
+              type: DEPENDENT
+              key: 'cuc.service.reason[{#SERVICE.NAME}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              description: 'ControlCenter reason text for the discovered service. Empty normally means no stop or failure reason is present.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - |
+                      var escapedName = "{#SERVICE.NAME}".replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                          record = new RegExp("<[^>]*ServiceName>\\s*" + escapedName + "\\s*<\\/[^>]*ServiceName>").exec(value);
+                      if (!record) throw "exact service record absent";
+                      var tail = value.slice(record.index + record[0].length), end = tail.search(/<\/[^>]*item>/);
+                      if (end < 0) throw "service record boundary absent";
+                      var block = tail.slice(0, end);var match = /<[^>]*ReasonCodeString>([^<]*)/.exec(block);
+                      return match ? match[1].trim() : "";
+              master_item:
+                key: cuc.control.services.raw
+              tags:
+                - tag: component
+                  value: service
+                - tag: scope
+                  value: operator
+            - uuid: 7baf1d28e1ac41cb81d2cbabb65b9238
+              name: 'CUC: service {#SERVICE.NAME}: state'
+              type: DEPENDENT
+              key: 'cuc.service.state[{#SERVICE.NAME}]'
+              delay: '0'
+              description: 'Current runtime state of the discovered critical service. The value map shows Unknown, Started, or Stopped.'
+              valuemap:
+                name: 'CUC service runtime state'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - |
+                      var escapedName = "{#SERVICE.NAME}".replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                          record = new RegExp("<[^>]*ServiceName>\\s*" + escapedName + "\\s*<\\/[^>]*ServiceName>").exec(value);
+                      if (!record) throw "exact service record absent";
+                      var tail = value.slice(record.index + record[0].length), end = tail.search(/<\/[^>]*item>/);
+                      if (end < 0) throw "service record boundary absent";
+                      var block = tail.slice(0, end);var match = /<[^>]*ServiceStatus>\s*([^<]+)\s*</.exec(block);
+                      if (!match) throw "service status absent";
+                      var status = match[1].trim();
+                      if (status === "Started") return 1;
+                      if (status === "Stopped") return 2;
+                      throw "unknown service status";
+              master_item:
+                key: cuc.control.services.raw
+              tags:
+                - tag: component
+                  value: service
+                - tag: scope
+                  value: operator
+              trigger_prototypes:
+                - uuid: c1526f09d13d475a878f2fb7439735fa
+                  expression: 'last(/Cisco Unity Connection 15 by API/cuc.service.state[{#SERVICE.NAME}])=2'
+                  name: 'CUC service {#SERVICE.NAME} is unexpectedly stopped'
+                  priority: HIGH
+                  description: 'A discovered critical Unity/VOS service is not running. Review the ControlCenter reason item before starting or restarting services.'
+                  tags:
+                    - tag: component
+                      value: service
+            - uuid: 2bc4bc6c17a541b28e52d687a4058321
+              name: 'CUC: service {#SERVICE.NAME}: uptime'
+              type: DEPENDENT
+              key: 'cuc.service.uptime[{#SERVICE.NAME}]'
+              delay: '0'
+              units: s
+              description: 'Time since the discovered critical service last started.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - |
+                      var escapedName = "{#SERVICE.NAME}".replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                          record = new RegExp("<[^>]*ServiceName>\\s*" + escapedName + "\\s*<\\/[^>]*ServiceName>").exec(value);
+                      if (!record) throw "exact service record absent";
+                      var tail = value.slice(record.index + record[0].length), end = tail.search(/<\/[^>]*item>/);
+                      if (end < 0) throw "service record boundary absent";
+                      var block = tail.slice(0, end);var state = /<[^>]*ServiceStatus>\s*([^<]+)\s*</.exec(block);
+                      if (!state) throw "service status absent";
+                      if (state[1].trim() === "Stopped") return 0;
+                      if (state[1].trim() !== "Started") throw "unknown service status";
+                      var match = /<[^>]*UpTime>\s*([^<]+)/.exec(block), uptime;
+                      if (!match) throw "started service uptime absent";
+                      uptime = Number(match[1]);
+                      if (!isFinite(uptime) || uptime < 0) throw "invalid service uptime";
+                      return uptime;
+              master_item:
+                key: cuc.control.services.raw
+              tags:
+                - tag: component
+                  value: service
+                - tag: scope
+                  value: operator
+              trigger_prototypes:
+                - uuid: 11fdbde9de07449b951b6f842cb1f7c6
+                  expression: 'last(/Cisco Unity Connection 15 by API/cuc.service.uptime[{#SERVICE.NAME}])>0 and last(/Cisco Unity Connection 15 by API/cuc.service.uptime[{#SERVICE.NAME}])<600'
+                  name: 'CUC service {#SERVICE.NAME} was restarted recently'
+                  priority: INFO
+                  description: 'The service uptime indicates a recent restart. Confirm whether it was planned and correlate with node or application events.'
+                  tags:
+                    - tag: component
+                      value: service
+          master_item:
+            key: cuc.control.services.raw
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  var data = [], seen = {}, match,
+                      exclude = new RegExp('{$CUC.SERVICES.NOT_TO_DISCOVER}'),
+                      pattern = /<[^>]*item>\s*<[^>]*ServiceName>([^<]+)[\s\S]*?<[^>]*ServiceStatus>([^<]+)/g;
+                  while ((match = pattern.exec(value)) !== null) {
+                      var name = match[1].trim();
+                      if (name && !seen[name] && !exclude.test(name)) {
+                          seen[name] = true;
+                          data.push({"{#SERVICE.NAME}": name, "{#SERVICE.STATUS}": match[2].trim()});
+                      }
+                  }
+                  if (!data.length) throw "no included service records";
+                  return JSON.stringify({data: data});
+      tags:
+        - tag: class
+          value: voip
+        - tag: target
+          value: cisco-unity-connection
+      macros:
+        - macro: '{$CUC.API.INTERVAL}'
+          value: 1m
+          description: 'Polling interval for API health and runtime data.'
+        - macro: '{$CUC.API.PASSWORD}'
+          type: SECRET_TEXT
+          description: 'Password for the dedicated Unity monitoring account. Override on the host.'
+        - macro: '{$CUC.API.TIMEOUT}'
+          value: 15s
+          description: 'Timeout for Unity API requests.'
+        - macro: '{$CUC.API.USER}'
+          value: zabbix-monitor
+          description: 'Username for the dedicated Unity monitoring account.'
+        - macro: '{$CUC.CERT.DISASTER}'
+          value: '7'
+          description: 'High certificate expiry threshold in days.'
+        - macro: '{$CUC.CERT.HIGH}'
+          value: '30'
+          description: 'Average certificate expiry threshold in days.'
+        - macro: '{$CUC.CERT.INFO}'
+          value: '90'
+          description: 'Informational certificate expiry threshold in days.'
+        - macro: '{$CUC.CERT.URL}'
+          value: 'https://cuc.example.invalid'
+          description: 'Cisco VOS certificate management base URL; override on the host.'
+        - macro: '{$CUC.CERT.WARN}'
+          value: '60'
+          description: 'Warning certificate expiry threshold in days.'
+        - macro: '{$CUC.CPU.HIGH}'
+          value: '90'
+          description: 'CPU high threshold in percent.'
+        - macro: '{$CUC.CPU.WARN}'
+          value: '80'
+          description: 'CPU warning threshold in percent.'
+        - macro: '{$CUC.INTERFACES.NOT_TO_DISCOVER}'
+          value: ^$
+          description: 'Regex for network interfaces excluded from discovery; ^$ excludes none.'
+        - macro: '{$CUC.HTTP.PROXY}'
+          value: ''
+          description: 'Optional HTTP proxy URL for HTTP agent requests; leave empty for a direct connection.'
+        - macro: '{$CUC.INVENTORY.INTERVAL}'
+          value: 15m
+          description: 'Interval for low-change VMREST capacity and inventory data.'
+        - macro: '{$CUC.INVENTORY.TIMEOUT}'
+          value: 45s
+          description: 'Timeout for the sequential VMREST inventory collector.'
+        - macro: '{$CUC.MEM.HIGH}'
+          value: '95'
+          description: 'Memory high threshold in percent.'
+        - macro: '{$CUC.MEM.WARN}'
+          value: '85'
+          description: 'Memory warning threshold in percent.'
+        - macro: '{$CUC.NODE}'
+          value: cuc-node
+          description: 'Exact Unity node hostname used in PerfMon counter paths.'
+        - macro: '{$CUC.OS.PASSWORD}'
+          type: SECRET_TEXT
+          description: 'Cisco VOS operating-system administrator password; override on the host.'
+        - macro: '{$CUC.OS.USER}'
+          value: os-monitor
+          description: 'Cisco VOS operating-system monitoring account; override on the host.'
+        - macro: '{$CUC.PARTITION.HIGH}'
+          value: '92'
+          description: 'Partition high threshold in percent.'
+        - macro: '{$CUC.PARTITION.WARN}'
+          value: '85'
+          description: 'Partition warning threshold in percent.'
+        - macro: '{$CUC.PARTITIONS.NOT_TO_DISCOVER}'
+          value: ^$
+          description: 'Regex for partitions excluded from discovery; ^$ excludes none.'
+        - macro: '{$CUC.PERFMON.INTERVAL}'
+          value: 2m
+          description: 'Platform PerfMon polling interval.'
+        - macro: '{$CUC.PORTS.HIGH}'
+          value: '95'
+          description: 'Voice-port utilization high threshold in percent.'
+        - macro: '{$CUC.PORTS.WARN}'
+          value: '80'
+          description: 'Voice-port utilization warning threshold in percent.'
+        - macro: '{$CUC.SERVICEABILITY.URL}'
+          value: 'https://cuc.example.invalid:8443'
+          description: 'Serviceability SOAP base URL, normally HTTPS on port 8443.'
+        - macro: '{$CUC.SERVICES.NOT_TO_DISCOVER}'
+          value: ^$
+          description: 'Regex for services excluded from discovery; ^$ excludes none.'
+        - macro: '{$CUC.SWAP.HIGH}'
+          value: '50'
+          description: 'Swap high threshold in percent.'
+        - macro: '{$CUC.SWAP.MEMORY.MIN}'
+          value: '85'
+          description: 'Minimum sustained memory utilization required before elevated allocated swap is page-worthy.'
+        - macro: '{$CUC.SWAP.WARN}'
+          value: '25'
+          description: 'Swap warning threshold in percent.'
+        - macro: '{$CUC.TELEPHONY.REQUIRED}'
+          value: '1'
+          description: 'Set to 1 when this Unity Connection node must have a phone system, port group, and voice ports.'
+        - macro: '{$CUC.TEMPLATE.VERSION}'
+          value: 1.3.0
+          description: 'Semantic release version of this Unity Connection template export.'
+        - macro: '{$CUC.URL}'
+          value: 'https://cuc.example.invalid'
+          description: 'Unity base URL without trailing slash. Override on the host.'
+      dashboards:
+        - uuid: 4a46f64d44b846bf9a72f827db1cf5d3
+          name: 'Unity Connection overview'
+          pages:
+            - name: Overview
+              widgets:
+                - type: svggraph
+                  name: 'Unity Connection utilization, in %'
+                  width: '72'
+                  height: '10'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color.0
+                      value: 1f78b4
+                    - type: STRING
+                      name: ds.0.color.1
+                      value: 33a02c
+                    - type: STRING
+                      name: ds.0.color.2
+                      value: ff7f00
+                    - type: INTEGER
+                      name: ds.0.dataset_type
+                      value: '0'
+                    - type: ITEM
+                      name: ds.0.itemids.0
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.cpu.util
+                    - type: ITEM
+                      name: ds.0.itemids.1
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.memory.util
+                    - type: ITEM
+                      name: ds.0.itemids.2
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.swap.util
+                    - type: STRING
+                      name: lefty_max
+                      value: '100'
+                    - type: STRING
+                      name: lefty_min
+                      value: '0'
+                    - type: INTEGER
+                      name: legend_lines
+                      value: '3'
+                    - type: INTEGER
+                      name: legend_statistic
+                      value: '1'
+                    - type: STRING
+                      name: reference
+                      value: AAAAA
+                    - type: INTEGER
+                      name: show_problems
+                      value: '1'
+      valuemaps:
+        - uuid: 82cb0fba39774438a0572e61101d62be
+          name: 'CUC collection health'
+          mappings:
+            - value: '0'
+              newvalue: 'Collection failed'
+            - value: '1'
+              newvalue: 'Collection OK'
+        - uuid: 383d3158df114c2e91a30ad91f7aed64
+          name: 'CUC service runtime state'
+          mappings:
+            - value: '0'
+              newvalue: Unknown
+            - value: '1'
+              newvalue: Started
+            - value: '2'
+              newvalue: Stopped
+        - uuid: 94fac7d0ff0344c299985dd5b93b31de
+          name: 'CUC VMREST availability'
+          mappings:
+            - value: '0'
+              newvalue: Unavailable
+            - value: '1'
+              newvalue: Available
+  triggers:
+    - uuid: f01bfb2ef2444e608c8197c2e09bc36d
+      expression: '{$CUC.TELEPHONY.REQUIRED}=1 and last(/Cisco Unity Connection 15 by API/cuc.phone_systems.total)>0 and last(/Cisco Unity Connection 15 by API/cuc.port_groups.total)=0'
+      name: 'CUC has no configured port group'
+      priority: HIGH
+      description: 'A phone system exists but VMREST reports no port group. Create a SIP/SCCP port group in CUC Administration and verify its CUCM destination.'
+      tags:
+        - tag: component
+          value: telephony
+    - uuid: acd57c2ae7ea4446bc6055db78de1fe8
+      expression: '{$CUC.TELEPHONY.REQUIRED}=1 and last(/Cisco Unity Connection 15 by API/cuc.phone_systems.total)>0 and last(/Cisco Unity Connection 15 by API/cuc.ports.total)=0'
+      name: 'CUC has no configured voice ports'
+      priority: HIGH
+      description: 'A phone system exists but VMREST reports no voice ports. Add and enable ports in CUC Administration; calls cannot be handled without them.'
+      tags:
+        - tag: component
+          value: telephony
