@@ -315,6 +315,84 @@ zabbix_export:
           tags:
             - tag: scope
               value: operator
+        - uuid: 11b7d6fd1cd14cd1a0423ee801000020
+          name: 'CUCM AXL: throttle state'
+          type: DEPENDENT
+          key: cucm.axl.throttle.state
+          delay: '0'
+          description: 'Current Cisco AXL Web Service throttle state from PerfMon. A value of 1 means CUCM is dynamically throttling AXL write requests; AXL has no fixed global requests-per-minute ceiling.'
+          valuemap:
+            name: 'CUCM AXL throttle state'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var r=/<[^>]*Name>[^<]*Cisco AXL Web Service\\ThrottleState<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid AXL throttle-state counter'';var v=Number(r[1]);if(v!==0&&v!==1)throw ''invalid AXL throttle state'';return v;'
+          master_item:
+            key: cucm.perfmon.axl.raw
+          triggers:
+            - uuid: 11b7d6fd1cd14cd1a0423ee801000021
+              expression: 'last(/Cisco Unified Communications Manager 15 by API/cucm.axl.throttle.state)=1'
+              name: 'CUCM AXL write requests are being throttled'
+              opdata: 'AXL throttle state: {ITEM.LASTVALUE1}'
+              priority: HIGH
+              description: 'CUCM PerfMon reports active Administrative XML (AXL) throttling. Write requests can be denied while reads continue. Reduce provisioning load and use delayed retry/backoff.'
+              tags:
+                - tag: component
+                  value: axl
+          tags:
+            - tag: scope
+              value: operator
+        - uuid: 11b7d6fd1cd14cd1a0423ee801000022
+          name: 'CUCM AXL: throttle events delta'
+          type: DEPENDENT
+          key: cucm.axl.throttle.events.delta
+          delay: '0'
+          description: 'New AXL throttle engagements since the preceding two-minute PerfMon poll. The underlying counter resets with the Cisco AXL Web Service.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var r=/<[^>]*Name>[^<]*Cisco AXL Web Service\\ThrottleCount<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid AXL throttle-count counter'';var v=Number(r[1]);if(!isFinite(v)||v<0||Math.floor(v)!==v)throw ''invalid AXL throttle count'';return v;'
+            - type: SIMPLE_CHANGE
+              parameters:
+                - ''
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1h
+          master_item:
+            key: cucm.perfmon.axl.raw
+          tags:
+            - tag: scope
+              value: operator
+        - uuid: 11b7d6fd1cd14cd1a0423ee801000023
+          name: 'CUCM SIP: trunks with valid active-call counters'
+          type: DEPENDENT
+          key: cucm.sip.trunks.count
+          delay: '0'
+          description: 'Number of SIP trunks represented by a valid PerfMon CallsActive counter after the configured inclusion/exclusion filters. This is runtime telemetry coverage, not an AXL configuration inventory count.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var i=new RegExp(''{$CUCM.SIP.TRUNKS.TO_DISCOVER}''),x=new RegExp(''{$CUCM.SIP.TRUNKS.NOT_TO_DISCOVER}''),s={},r=/<[^>]*Name>[^<]*Cisco SIP\(([^)]+)\)\\CallsActive<\/[^>]*Name>[\s\S]*?<[^>]*CStatus>1<\/[^>]*CStatus>/g,m;while((m=r.exec(value))!==null){var n=m[1].trim();if(n&&i.test(n)&&!x.test(n))s[n]=1;}var a=Object.keys(s);if(!a.length)throw ''no included SIP trunks with valid active-call counters'';return a.length;'
+          master_item:
+            key: cucm.perfmon.sip.raw
+          tags:
+            - tag: scope
+              value: operator
+        - uuid: 11b7d6fd1cd14cd1a0423ee801000024
+          name: 'CUCM SIP: active calls across discovered trunks'
+          type: DEPENDENT
+          key: cucm.sip.calls.active.total
+          delay: '0'
+          description: 'Sum of active calls across SIP trunks with valid, included PerfMon CallsActive counters. Excluded trunks are intentionally absent.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var i=new RegExp(''{$CUCM.SIP.TRUNKS.TO_DISCOVER}''),x=new RegExp(''{$CUCM.SIP.TRUNKS.NOT_TO_DISCOVER}''),r=/<[^>]*Name>[^<]*Cisco SIP\(([^)]+)\)\\CallsActive<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/g,m,total=0,n=0;while((m=r.exec(value))!==null){var t=m[1].trim(),v=Number(m[2]);if(t&&i.test(t)&&!x.test(t)&&Number(m[3])===1&&isFinite(v)&&v>=0){total+=v;n++;}}if(!n)throw ''no included SIP trunks with valid active-call counters'';return total;'
+          master_item:
+            key: cucm.perfmon.sip.raw
+          tags:
+            - tag: scope
+              value: operator
         - uuid: e7783edc61b549ad87499349b1341efa
           name: 'CUCM internal: Certificate Management identity snapshot raw/master'
           type: HTTP_AGENT
@@ -1042,6 +1120,31 @@ zabbix_export:
           tags:
             - tag: scope
               value: internal
+        - uuid: 11b7d6fd1cd14cd1a0423ee801000025
+          name: 'CUCM internal: PerfMon AXL Web Service raw/master'
+          type: HTTP_AGENT
+          key: cucm.perfmon.axl.raw
+          delay: 2m
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUCM.USER}'
+          password: '{$CUCM.PASSWORD}'
+          description: 'Internal transport/master item. Raw PerfMon payload for AXL dynamic-throttling telemetry. Filter scope=internal; do not use this raw value for incident interpretation.'
+          timeout: 30s
+          url: '{$CUCM.URL}/perfmonservice2/services/PerfmonService'
+          http_proxy: '{$CUCM.HTTP.PROXY}'
+          posts: '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://schemas.cisco.com/ast/soap"><s:Body><ns:perfmonCollectCounterData><ns:Host>{$CUCM.NODE}</ns:Host><ns:Object>Cisco AXL Web Service</ns:Object></ns:perfmonCollectCounterData></s:Body></s:Envelope>'
+          headers:
+            - name: Content-Type
+              value: text/xml
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          tags:
+            - tag: scope
+              value: internal
         - uuid: 4a1b265d9e524687991646ef734d391f
           name: 'CUCM internal: RISPort70 health response raw/master'
           type: HTTP_AGENT
@@ -1250,6 +1353,20 @@ zabbix_export:
                   tags:
                     - tag: component
                       value: certificate
+            - uuid: 63f4180d0ef842f3b35a19a522d9dc45
+              name: 'CUCM certificate {#CERT.NAME}: issuer common name'
+              type: DEPENDENT
+              key: 'cucm.certificate.issuer.cn[{#CERT.NAME}]'
+              delay: '0'
+              value_type: TEXT
+              trends: '0'
+              description: 'Issuer common name (CN) extracted from the normalized Issuer DN. Certificates without an Issuer CN fail closed rather than reporting an invented value.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var m=/(?:^|,\s*)CN=([^,]+)/.exec(value);if(!m||!m[1])throw ''issuer CN absent'';return m[1];'
+              master_item:
+                key: 'cucm.certificate.issuer[{#CERT.NAME}]'
             - uuid: 04db80f7f0a34fe49dbd95aa964a7a1e
               name: 'CUCM certificate {#CERT.NAME}: issuer'
               type: DEPENDENT
@@ -1265,16 +1382,17 @@ zabbix_export:
               master_item:
                 key: cucm.certificate.snapshot.raw
             - uuid: 9043acca260847a6a57c31a1eacc6d3d
-              name: 'CUCM certificate {#CERT.NAME}: expiry raw date'
+              name: 'CUCM certificate {#CERT.NAME}: expiry date (UTC)'
               type: DEPENDENT
               key: 'cucm.certificate.rawdate[{#CERT.NAME}]'
               delay: '0'
               value_type: CHAR
               trends: '0'
+              description: 'PEM-derived certificate expiry in ISO 8601 UTC format. This is operator-facing metadata; days-until-expiry remains the alerting metric.'
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++){if(a[i].indexOf(''---'')!==0&&a[i].length)s+=new TextDecoder().decode(atob(a[i]));}var m=s.match(/(\d{12})[\s\S]*(\d{12})/);if(!m)throw ''expiry absent'';return m[2];'
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++){if(a[i].indexOf(''---'')!==0&&a[i].length)s+=new TextDecoder().decode(atob(a[i]));}var m=s.match(/(\d{12})[\s\S]*(\d{12})/);if(!m)throw ''expiry absent'';var z=m[2],y=2000+Number(z.slice(0,2)),mo=Number(z.slice(2,4)),da=Number(z.slice(4,6)),h=Number(z.slice(6,8)),mi=Number(z.slice(8,10)),se=Number(z.slice(10,12));if(mo<1||mo>12||da<1||da>31||h>23||mi>59||se>59)throw ''invalid expiry'';function p(n){return (''0''+n).slice(-2);}return [y,p(mo),p(da)].join(''-'')+''T''+[p(h),p(mi),p(se)].join('':'')+''Z'';'
               master_item:
                 key: cucm.certificate.snapshot.raw
             - uuid: 8ca8d7125b7b4d4bb81c27d3f6ca7001
@@ -1291,6 +1409,20 @@ zabbix_export:
                     - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var pem=x.certificate;if(!/^-----BEGIN CERTIFICATE-----\s*[\s\S]*\s*-----END CERTIFICATE-----\s*$/.test(pem))throw ''invalid PEM framing'';var p=pem.replace(/-----[^-]+-----|\s/g,'''');if(!p)throw ''PEM absent'';var z=atob(p),b='''';for(var h=0;h<z.length;h++)b+=String.fromCharCode(z[h]);var n=b.length;function B(q){return b.charCodeAt(q);}function r(q){if(q+2>n)throw ''truncated DER'';var t=B(q++),l=B(q++),u;if(l&128){u=l&127;if(!u||u>4||q+u>n)throw ''invalid DER length'';l=0;while(u--)l=l*256+B(q++);}if(q+l>n)throw ''truncated DER'';return {t:t,v:q,e:q+l,n:q+l};}function txt(a){return b.slice(a.v,a.e);}function ip(a){var q=a.v,o=[];if(a.e-q===4){for(;q<a.e;q++)o.push(B(q));return o.join(''.'');}if(a.e-q!==16)throw ''invalid SAN IP'';for(var i=0;i<8;i++,q+=2)o.push((B(q)*256+B(q+1)).toString(16));return o.join('':'');}var top=r(0);if(top.t!==48||top.e!==n)throw ''invalid certificate DER'';var tbs=r(top.v);if(tbs.t!==48||tbs.e>top.e)throw ''invalid TBSCertificate'';var sigalg=r(tbs.n),sigval=r(sigalg.n);if(sigalg.t!==48||sigval.t!==3||sigval.n!==top.e||sigval.e-sigval.v<2)throw ''invalid certificate signature structure'';var algoid=r(sigalg.v);if(algoid.t!==6)throw ''invalid signature algorithm'';if(algoid.n<sigalg.e&&r(algoid.n).n!==sigalg.e)throw ''invalid signature parameters'';var unused=B(sigval.v);if(unused>7||(unused&&((B(sigval.e-1)&((1<<unused)-1))!==0)))throw ''invalid signature bit string'';var q=tbs.v,a=r(q);if(a.t===160){q=a.n;a=r(q);}q=a.n;for(var skip=0;skip<5;skip++){a=r(q);q=a.n;}var ext=null;while(q<tbs.e){a=r(q);q=a.n;if(a.t===163){if(ext)throw ''duplicate extensions'';ext=a;}}if(!ext)return ''No SAN extension'';var seq=r(ext.v);if(seq.t!==48||seq.e!==ext.e)throw ''invalid extensions'';var sanv=null;for(q=seq.v;q<seq.e;){var one=r(q);q=one.n;if(one.t!==48)throw ''invalid extension'';var e=r(one.v);if(e.t!==6)throw ''extension OID absent'';var san=e.e-e.v===3&&B(e.v)===85&&B(e.v+1)===29&&B(e.v+2)===17;var v=r(e.n);if(v.t===1)v=r(v.n);if(v.t!==4||v.n!==one.e)throw ''invalid extension value'';if(san){if(sanv)throw ''duplicate SAN extension'';sanv=v;}}if(!sanv)return ''No SAN extension'';var names=r(sanv.v);if(names.t!==48||names.e!==sanv.e)throw ''invalid SAN sequence'';var out=[];for(var j=names.v;j<names.e;){var g=r(j);j=g.n;if(g.t===130)out.push(''DNS:''+txt(g));else if(g.t===135)out.push(''IP:''+ip(g));else if(g.t===134)out.push(''URI:''+txt(g));else if(g.t===129)out.push(''RFC822:''+txt(g));}return out.length?out.join('', ''):''No SAN extension'';'
               master_item:
                 key: cucm.certificate.snapshot.raw
+            - uuid: 8d7417104f8c4d40b456939a9c65af21
+              name: 'CUCM certificate {#CERT.NAME}: subject common name'
+              type: DEPENDENT
+              key: 'cucm.certificate.subject.cn[{#CERT.NAME}]'
+              delay: '0'
+              value_type: TEXT
+              trends: '0'
+              description: 'Subject common name (CN) extracted from the normalized Subject DN. Certificates without a Subject CN fail closed rather than reporting an invented value.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var m=/(?:^|,\s*)CN=([^,]+)/.exec(value);if(!m||!m[1])throw ''subject CN absent'';return m[1];'
+              master_item:
+                key: 'cucm.certificate.subject[{#CERT.NAME}]'
             - uuid: 0df19c1e636a4b16a812c9969e3b52ac
               name: 'CUCM certificate {#CERT.NAME}: subject'
               type: DEPENDENT
@@ -1818,13 +1950,115 @@ zabbix_export:
           description: 'Least-privilege CUCM API username. Override on the host.'
       dashboards:
         - uuid: 71df05ce849f45ce9c2f47bf8b1542e2
-          name: 'CUCM overview'
+          name: 'CUCM operations overview'
           pages:
             - name: Overview
               widgets:
+                - type: item
+                  name: 'DB replication'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.system.dbreplication
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'Memory utilization'
+                  x: '12'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.memory.util
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'Registered hardware phones'
+                  x: '24'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.callmanager.registered.hardware
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'Active SIP trunks'
+                  x: '36'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.sip.trunks.count
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'AXL throttle state'
+                  x: '48'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.axl.throttle.state
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'AXL throttle events'
+                  x: '60'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.axl.throttle.events.delta
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
                 - type: svggraph
-                  name: 'CUCM utilization, in %'
-                  width: '72'
+                  name: 'Node utilization, in %'
+                  'y': '5'
+                  width: '36'
                   height: '10'
                   fields:
                     - type: STRING
@@ -1872,6 +2106,141 @@ zabbix_export:
                     - type: INTEGER
                       name: show_problems
                       value: '1'
+                - type: svggraph
+                  name: 'Endpoint and SIP-trunk activity'
+                  x: '36'
+                  'y': '5'
+                  width: '36'
+                  height: '10'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color.0
+                      value: 1f78b4
+                    - type: STRING
+                      name: ds.0.color.1
+                      value: 33a02c
+                    - type: STRING
+                      name: ds.0.color.2
+                      value: ff7f00
+                    - type: INTEGER
+                      name: ds.0.dataset_type
+                      value: '0'
+                    - type: ITEM
+                      name: ds.0.itemids.0
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.callmanager.registered.hardware
+                    - type: ITEM
+                      name: ds.0.itemids.1
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.sip.trunks.count
+                    - type: ITEM
+                      name: ds.0.itemids.2
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.sip.calls.active.total
+                    - type: INTEGER
+                      name: legend_lines
+                      value: '3'
+                    - type: INTEGER
+                      name: legend_statistic
+                      value: '1'
+                    - type: STRING
+                      name: reference
+                      value: BBBBB
+                    - type: INTEGER
+                      name: show_problems
+                      value: '1'
+                - type: svggraph
+                  name: 'AXL dynamic-throttling telemetry'
+                  'y': '15'
+                  width: '36'
+                  height: '10'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color.0
+                      value: e31a1c
+                    - type: STRING
+                      name: ds.0.color.1
+                      value: 6a3d9a
+                    - type: INTEGER
+                      name: ds.0.dataset_type
+                      value: '0'
+                    - type: ITEM
+                      name: ds.0.itemids.0
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.axl.throttle.state
+                    - type: ITEM
+                      name: ds.0.itemids.1
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.axl.throttle.events.delta
+                    - type: STRING
+                      name: lefty_max
+                      value: '2'
+                    - type: STRING
+                      name: lefty_min
+                      value: '0'
+                    - type: INTEGER
+                      name: legend_lines
+                      value: '2'
+                    - type: INTEGER
+                      name: legend_statistic
+                      value: '1'
+                    - type: STRING
+                      name: reference
+                      value: CCCCC
+                    - type: INTEGER
+                      name: show_problems
+                      value: '1'
+                - type: svggraph
+                  name: 'Call processing and MGCP gateways'
+                  x: '36'
+                  'y': '15'
+                  width: '36'
+                  height: '10'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color.0
+                      value: 33a02c
+                    - type: STRING
+                      name: ds.0.color.1
+                      value: ff7f00
+                    - type: STRING
+                      name: ds.0.color.2
+                      value: 1f78b4
+                    - type: INTEGER
+                      name: ds.0.dataset_type
+                      value: '0'
+                    - type: ITEM
+                      name: ds.0.itemids.0
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.callmanager.calls.inprogress
+                    - type: ITEM
+                      name: ds.0.itemids.1
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.callmanager.registered.mgcp
+                    - type: ITEM
+                      name: ds.0.itemids.2
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.callprocessing.queue.high
+                    - type: INTEGER
+                      name: legend_lines
+                      value: '3'
+                    - type: INTEGER
+                      name: legend_statistic
+                      value: '1'
+                    - type: STRING
+                      name: reference
+                      value: DDDDD
+                    - type: INTEGER
+                      name: show_problems
+                      value: '1'
       valuemaps:
         - uuid: 4f9bc0d454c342d2a967c5f28e8476c1
           name: 'CUCM collection health'
@@ -1880,6 +2249,13 @@ zabbix_export:
               newvalue: 'Collection failed'
             - value: '1'
               newvalue: 'Collection OK'
+        - uuid: 11b7d6fd1cd14cd1a0423ee801000026
+          name: 'CUCM AXL throttle state'
+          mappings:
+            - value: '0'
+              newvalue: 'Not throttled'
+            - value: '1'
+              newvalue: 'Write requests throttled'
         - uuid: 27c1d151282d4d8793465a29c70b5601
           name: 'CUCM DB replication state'
           mappings:
