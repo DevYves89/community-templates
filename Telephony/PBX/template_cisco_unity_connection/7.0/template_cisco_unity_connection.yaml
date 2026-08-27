@@ -7,7 +7,7 @@ zabbix_export:
     - uuid: 1d6c69fc149a48febbf6a61ce8dc3d33
       template: 'Cisco Unity Connection 15 by API'
       name: 'Cisco Unity Connection 15 by API'
-      description: 'Cisco Unity Connection 15 monitoring through read-only VMREST/CUPI, Cisco Serviceability PerfMon and ControlCenter SOAP, and the Cisco VOS Certificate Management API. Set the endpoint, node, and least-privilege secret macros on the host before linking. Operator items use scope=operator; transport/master payloads use scope=internal.'
+      description: 'Cisco Unity Connection 15 monitoring through read-only VMREST/CUPI, Cisco Serviceability PerfMon and ControlCenter SOAP, and the Cisco VOS Certificate Management API. Before linking, create a dedicated Unity user without a mailbox and assign Read Only Administrator for GET-only VMREST/CUPI and Serviceability monitoring; use System Administrator only as a compatibility fallback if the installed release rejects a required read endpoint. Store it in {$CUC.API.USER} and {$CUC.API.PASSWORD}. For certificate discovery, create a separate Cisco VOS account with certificate-API privilege 0 (read only) and store it in {$CUC.OS.USER} and {$CUC.OS.PASSWORD}. Set the endpoint and node macros on the host. Operator items use scope=operator; transport/master payloads use scope=internal.'
       groups:
         - name: Templates/Telephony
       items:
@@ -214,7 +214,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Call Count Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Call Count Current";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Call Count Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Call Count Current";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -234,7 +234,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Call Duration Average [s]",p=value.indexOf(marker);if(p<0)throw "counter absent: Call Duration Average [s]";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Call Duration Average [s]",p=value.indexOf(marker);if(p<0)throw "counter absent: Call Duration Average [s]";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -253,7 +253,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Incoming Calls Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Incoming Calls Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Incoming Calls Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Incoming Calls Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -272,7 +272,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Missed Call Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Missed Call Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Missed Call Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Missed Call Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -291,7 +291,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Call Count Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Call Count Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Call Count Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Call Count Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -310,7 +310,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Calls Unanswered Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Calls Unanswered Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Calls Unanswered Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Calls Unanswered Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -409,16 +409,18 @@ zabbix_export:
               value: operator
           triggers:
             - uuid: 018fe4d925944caa9a03461bf1ef1cca
-              expression: 'min(/Cisco Unity Connection 15 by API/cuc.cpu.util,10m)>{$CUC.CPU.WARN} and min(/Cisco Unity Connection 15 by API/cuc.cpu.util,10m)<={$CUC.CPU.HIGH}'
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.cpu.util,10m)>={$CUC.CPU.WARN} and min(/Cisco Unity Connection 15 by API/cuc.cpu.util,10m)<{$CUC.CPU.HIGH}'
               name: 'CUC: CPU utilization is elevated'
+              opdata: 'CPU: {ITEM.LASTVALUE1}'
               priority: WARNING
               description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
               tags:
                 - tag: component
                   value: cpu
             - uuid: f5446f0f98924149b65650f89d443bbf
-              expression: 'min(/Cisco Unity Connection 15 by API/cuc.cpu.util,10m)>{$CUC.CPU.HIGH}'
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.cpu.util,10m)>={$CUC.CPU.HIGH}'
               name: 'CUC: CPU utilization is high'
+              opdata: 'CPU: {ITEM.LASTVALUE1}'
               priority: HIGH
               description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
               tags:
@@ -436,7 +438,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Free KBytes");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(value.slice(p));if(!r||Number(r[2])!==1)throw "invalid Free KBytes counter";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid Free KBytes value";return n*1024;'
+                - 'var p=value.indexOf("Free KBytes");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "invalid Free KBytes counter";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid Free KBytes value";return n*1024;'
           master_item:
             key: cuc.perfmon.memory.raw
           tags:
@@ -456,7 +458,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Total KBytes");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(value.slice(p));if(!r||Number(r[2])!==1)throw "invalid Total KBytes counter";var n=Number(r[1]);if(!isFinite(n)||n<=0)throw "invalid Total KBytes value";return n*1024;'
+                - 'var p=value.indexOf("Total KBytes");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "invalid Total KBytes counter";var n=Number(r[1]);if(!isFinite(n)||n<=0)throw "invalid Total KBytes value";return n*1024;'
           master_item:
             key: cuc.perfmon.memory.raw
           tags:
@@ -476,7 +478,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("% Mem Used");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(value.slice(p));if(!r||Number(r[2])!==1)throw "invalid memory counter";var n=Number(r[1]);if(!isFinite(n)||n<0||n>100)throw "invalid memory value";return n;'
+                - 'var p=value.indexOf("% Mem Used");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "invalid memory counter";var n=Number(r[1]);if(!isFinite(n)||n<0||n>100)throw "invalid memory value";return n;'
           master_item:
             key: cuc.perfmon.memory.raw
           tags:
@@ -486,16 +488,18 @@ zabbix_export:
               value: operator
           triggers:
             - uuid: fd66cf7d7bb2401b8522a05568639ab4
-              expression: 'min(/Cisco Unity Connection 15 by API/cuc.memory.util,10m)>{$CUC.MEM.WARN} and min(/Cisco Unity Connection 15 by API/cuc.memory.util,10m)<={$CUC.MEM.HIGH}'
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.memory.util,10m)>={$CUC.MEM.WARN} and min(/Cisco Unity Connection 15 by API/cuc.memory.util,10m)<{$CUC.MEM.HIGH}'
               name: 'CUC: memory utilization is elevated'
+              opdata: 'Memory: {ITEM.LASTVALUE1}'
               priority: WARNING
               description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
               tags:
                 - tag: component
                   value: memory
             - uuid: d2df4590e8d74202b845861152d94274
-              expression: 'min(/Cisco Unity Connection 15 by API/cuc.memory.util,10m)>{$CUC.MEM.HIGH}'
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.memory.util,10m)>={$CUC.MEM.HIGH}'
               name: 'CUC: memory utilization is high'
+              opdata: 'Memory: {ITEM.LASTVALUE1}'
               priority: HIGH
               description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
               tags:
@@ -511,7 +515,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\MWI Requests Failed Total",p=value.indexOf(marker);if(p<0)throw "counter absent: MWI Requests Failed Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\MWI Requests Failed Total",p=value.indexOf(marker);if(p<0)throw "counter absent: MWI Requests Failed Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -538,7 +542,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\MWI Requests Total",p=value.indexOf(marker);if(p<0)throw "counter absent: MWI Requests Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\MWI Requests Total",p=value.indexOf(marker);if(p<0)throw "counter absent: MWI Requests Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -575,7 +579,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Message Notifications Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Message Notifications Failed";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Message Notifications Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Message Notifications Failed";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -602,7 +606,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Message Notifications Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Message Notifications Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Message Notifications Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Message Notifications Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -620,7 +624,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Pager Notifications Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Pager Notifications Failed";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Pager Notifications Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Pager Notifications Failed";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -647,7 +651,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Pager Notifications Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Pager Notifications Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Pager Notifications Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Pager Notifications Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -667,7 +671,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Partition(Active)");if(p<0)throw "counter not found";var q=value.indexOf("% Used",p);var r=/<[^>]*Value>([^<]+)/.exec(value.slice(q));if(!r)throw "value missing";return Number(r[1]);'
+                - 'var p=value.indexOf("Partition(Active)");if(p<0)throw "counter not found";var q=value.indexOf("% Used",p);if(q<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var n=/<[A-Za-z_][^>]*Name>/.exec(b);return n?b.slice(0,n.index):b;})(value.slice(q)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0||n>100)throw "invalid partition utilization";return n;'
           master_item:
             key: cuc.perfmon.partition.raw
           tags:
@@ -677,16 +681,18 @@ zabbix_export:
               value: operator
           triggers:
             - uuid: 0ecc2f9e51b24f279c0fc1b1e410d8f1
-              expression: 'min(/Cisco Unity Connection 15 by API/cuc.partition.active.used,10m)>{$CUC.PARTITION.WARN} and min(/Cisco Unity Connection 15 by API/cuc.partition.active.used,10m)<={$CUC.PARTITION.HIGH}'
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.partition.active.used,10m)>={$CUC.PARTITION.WARN} and min(/Cisco Unity Connection 15 by API/cuc.partition.active.used,10m)<{$CUC.PARTITION.HIGH}'
               name: 'CUC: active partition utilization is elevated'
+              opdata: 'Partition utilization: {ITEM.LASTVALUE1}'
               priority: WARNING
               description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
               tags:
                 - tag: component
                   value: storage
             - uuid: 5a1aa9dccba341e88d1de724abc642dc
-              expression: 'min(/Cisco Unity Connection 15 by API/cuc.partition.active.used,10m)>{$CUC.PARTITION.HIGH}'
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.partition.active.used,10m)>={$CUC.PARTITION.HIGH}'
               name: 'CUC: active partition utilization is high'
+              opdata: 'Partition utilization: {ITEM.LASTVALUE1}'
               priority: HIGH
               description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
               tags:
@@ -962,7 +968,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Ports Idle Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Ports Idle Current";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Ports Idle Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Ports Idle Current";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -981,7 +987,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Ports In Use Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Ports In Use Current";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Ports In Use Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Ports In Use Current";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -1000,7 +1006,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Ports Locked",p=value.indexOf(marker);if(p<0)throw "counter absent: Ports Locked";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Ports Locked",p=value.indexOf(marker);if(p<0)throw "counter absent: Ports Locked";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -1049,7 +1055,7 @@ zabbix_export:
             - type: JAVASCRIPT
               parameters:
                 - |
-                  function counter(name){var marker="\\{$CUC.NODE}\\CUC Phone System\\"+name,p=value.indexOf(marker);if(p<0)throw "counter absent: "+name;var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "value absent: "+name;return Number(r[1]);}
+                  function counter(name){var marker="\\{$CUC.NODE}\\CUC Phone System\\"+name,p=value.indexOf(marker);if(p<0)throw "counter absent: "+name;var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable: "+name;var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value: "+name;return n;}
                   var used=counter("Ports In Use Current"),idle=counter("Ports Idle Current"),total=used+idle;if(total<=0)return 0;return used*100/total;
           master_item:
             key: cuc.perfmon.phone_system.raw
@@ -1060,16 +1066,18 @@ zabbix_export:
               value: operator
           triggers:
             - uuid: 6d4680bab7dd4d9da94ab8c811d9d8b7
-              expression: 'min(/Cisco Unity Connection 15 by API/cuc.ports.util,5m)>{$CUC.PORTS.WARN} and min(/Cisco Unity Connection 15 by API/cuc.ports.util,5m)<={$CUC.PORTS.HIGH}'
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.ports.util,5m)>={$CUC.PORTS.WARN} and min(/Cisco Unity Connection 15 by API/cuc.ports.util,5m)<{$CUC.PORTS.HIGH}'
               name: 'CUC voice-port utilization is elevated'
+              opdata: 'Voice-port utilization: {ITEM.LASTVALUE1}'
               priority: WARNING
               description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
               tags:
                 - tag: component
                   value: telephony
             - uuid: 6fe87b1ab27240568bb0c397ef44e172
-              expression: 'min(/Cisco Unity Connection 15 by API/cuc.ports.util,5m)>{$CUC.PORTS.HIGH}'
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.ports.util,5m)>={$CUC.PORTS.HIGH}'
               name: 'CUC voice-port utilization is high'
+              opdata: 'Voice-port utilization: {ITEM.LASTVALUE1}'
               priority: HIGH
               description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
               tags:
@@ -1106,7 +1114,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Total Swap KBytes");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(value.slice(p));if(!r||Number(r[2])!==1)throw "invalid total swap counter";var t=Number(r[1]);p=value.indexOf("Used Swap KBytes");r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(value.slice(p));if(!r||Number(r[2])!==1||!isFinite(t)||t<=0)throw "invalid used swap counter";var u=Number(r[1]);if(!isFinite(u)||u<0||u>t)throw "invalid swap value";return u*100/t;'
+                - 'var p=value.indexOf("Total Swap KBytes");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "invalid total swap counter";var t=Number(r[1]);p=value.indexOf("Used Swap KBytes");r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1||!isFinite(t)||t<=0)throw "invalid used swap counter";var u=Number(r[1]);if(!isFinite(u)||u<0||u>t)throw "invalid swap value";return u*100/t;'
           master_item:
             key: cuc.perfmon.memory.raw
           tags:
@@ -1136,7 +1144,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("IOPerSecond");if(p<0)throw "counter not found";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value missing";return Number(r[1]);'
+                - 'var p=value.indexOf("IOPerSecond");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;'
           master_item:
             key: cuc.perfmon.system.raw
           tags:
@@ -1154,7 +1162,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Total Processes");if(p<0)throw "counter not found";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value missing";return Number(r[1]);'
+                - 'var p=value.indexOf("Total Processes");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;'
           master_item:
             key: cuc.perfmon.system.raw
           tags:
@@ -1172,7 +1180,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Total Threads");if(p<0)throw "counter not found";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value missing";return Number(r[1]);'
+                - 'var p=value.indexOf("Total Threads");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;'
           master_item:
             key: cuc.perfmon.system.raw
           tags:
@@ -1191,7 +1199,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Total CPU Time");if(p<0)throw "counter not found";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value missing";return Number(r[1])*0.01;'
+                - 'var p=value.indexOf("Total CPU Time");if(p<0)throw "counter not found";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid CPU time";return n*0.01;'
           master_item:
             key: cuc.perfmon.system.raw
           tags:
@@ -1218,7 +1226,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Outgoing Calls Release Transfers Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Outgoing Calls Release Transfers Failed";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Outgoing Calls Release Transfers Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Outgoing Calls Release Transfers Failed";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -1245,7 +1253,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Outgoing Calls Supervised Transfers Dropped",p=value.indexOf(marker);if(p<0)throw "counter absent: Outgoing Calls Supervised Transfers Dropped";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Outgoing Calls Supervised Transfers Dropped",p=value.indexOf(marker);if(p<0)throw "counter absent: Outgoing Calls Supervised Transfers Dropped";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -1272,7 +1280,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Outgoing Calls Supervised Transfers Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Outgoing Calls Supervised Transfers Failed";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Outgoing Calls Supervised Transfers Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Outgoing Calls Supervised Transfers Failed";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -1436,7 +1444,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Sessions: Voice\\Failsafes Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Failsafes Total";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Sessions: Voice\\Failsafes Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Failsafes Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.voice_sessions.raw
           tags:
@@ -1465,7 +1473,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Sessions: Voice\\Delay - Opening Greeting [ms]",p=value.indexOf(marker);if(p<0)throw "counter absent: Delay - Opening Greeting [ms]";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Sessions: Voice\\Delay - Opening Greeting [ms]",p=value.indexOf(marker);if(p<0)throw "counter absent: Delay - Opening Greeting [ms]";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.voice_sessions.raw
           tags:
@@ -1484,7 +1492,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Sessions: Voice\\Sessions Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Sessions Current";var r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "counter value absent";var n=Number(r[1]);if(!isFinite(n))throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Sessions: Voice\\Sessions Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Sessions Current";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.voice_sessions.raw
           tags:
@@ -1631,7 +1639,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var marker="Network Interface({#IF.NAME})\\Rx Bytes",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);'
+                    - 'var marker="Network Interface({#IF.NAME})\\Rx Bytes",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;'
                 - type: CHANGE_PER_SECOND
                   parameters:
                     - ''
@@ -1655,7 +1663,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var marker="Network Interface({#IF.NAME})\\Rx Dropped",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);'
+                    - 'var marker="Network Interface({#IF.NAME})\\Rx Dropped",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;'
                 - type: SIMPLE_CHANGE
                   parameters:
                     - ''
@@ -1677,7 +1685,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var marker="Network Interface({#IF.NAME})\\Tx Bytes",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);'
+                    - 'var marker="Network Interface({#IF.NAME})\\Tx Bytes",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;'
                 - type: CHANGE_PER_SECOND
                   parameters:
                     - ''
@@ -1701,7 +1709,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var marker="Network Interface({#IF.NAME})\\Tx Dropped",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);'
+                    - 'var marker="Network Interface({#IF.NAME})\\Tx Dropped",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;'
                 - type: SIMPLE_CHANGE
                   parameters:
                     - ''
@@ -1750,7 +1758,8 @@ zabbix_export:
                     - |
                       var marker="Partition({#PARTITION})\\Total Mbytes",p=value.indexOf(marker);
                       if(p<0)throw "counter absent";
-                      var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1])*1048576;
+                      var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";
+                      var n=Number(r[1]);if(!isFinite(n)||n<=0)throw "invalid partition capacity";return n*1048576;
               master_item:
                 key: cuc.perfmon.partition.raw
               tags:
@@ -1772,7 +1781,8 @@ zabbix_export:
                     - |
                       var marker="Partition({#PARTITION})\\Used Mbytes",p=value.indexOf(marker);
                       if(p<0)throw "counter absent";
-                      var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1])*1048576;
+                      var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";
+                      var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid partition usage";return n*1048576;
               master_item:
                 key: cuc.perfmon.partition.raw
               tags:
@@ -1794,7 +1804,7 @@ zabbix_export:
                     - |
                       var marker="Partition({#PARTITION})\\% Used",p=value.indexOf(marker);
                       if(p<0)throw "counter absent";
-                      var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);
+                      var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;
               master_item:
                 key: cuc.perfmon.partition.raw
               tags:
@@ -1804,16 +1814,18 @@ zabbix_export:
                   value: operator
               trigger_prototypes:
                 - uuid: f020e0f7f5bf478eb91babe62528d3ad
-                  expression: 'min(/Cisco Unity Connection 15 by API/cuc.partition.used[{#PARTITION}],10m)>{$CUC.PARTITION.WARN} and min(/Cisco Unity Connection 15 by API/cuc.partition.used[{#PARTITION}],10m)<={$CUC.PARTITION.HIGH}'
+                  expression: 'min(/Cisco Unity Connection 15 by API/cuc.partition.used[{#PARTITION}],10m)>={$CUC.PARTITION.WARN} and min(/Cisco Unity Connection 15 by API/cuc.partition.used[{#PARTITION}],10m)<{$CUC.PARTITION.HIGH}'
                   name: 'CUC partition {#PARTITION} utilization is elevated'
+                  opdata: 'Partition utilization: {ITEM.LASTVALUE1}'
                   priority: WARNING
                   description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
                   tags:
                     - tag: component
                       value: storage
                 - uuid: 987d9d7b0007444b9f7736eccf4157e0
-                  expression: 'min(/Cisco Unity Connection 15 by API/cuc.partition.used[{#PARTITION}],10m)>{$CUC.PARTITION.HIGH}'
+                  expression: 'min(/Cisco Unity Connection 15 by API/cuc.partition.used[{#PARTITION}],10m)>={$CUC.PARTITION.HIGH}'
                   name: 'CUC partition {#PARTITION} utilization is high'
+                  opdata: 'Partition utilization: {ITEM.LASTVALUE1}'
                   priority: HIGH
                   description: 'Sustained utilization crossed the configured macro threshold. Review capacity and concurrent-call demand before changing the threshold.'
                   tags:
@@ -1978,13 +1990,13 @@ zabbix_export:
           description: 'Polling interval for API health and runtime data.'
         - macro: '{$CUC.API.PASSWORD}'
           type: SECRET_TEXT
-          description: 'Password for the dedicated Unity monitoring account. Override on the host.'
+          description: 'Secret web password for the dedicated Unity monitoring user in {$CUC.API.USER}. Override on the host.'
         - macro: '{$CUC.API.TIMEOUT}'
           value: 15s
           description: 'Timeout for Unity API requests.'
         - macro: '{$CUC.API.USER}'
           value: zabbix-monitor
-          description: 'Username for the dedicated Unity monitoring account.'
+          description: 'Dedicated Unity user without a mailbox. Assign Read Only Administrator for GET-only VMREST/CUPI and Serviceability access; use System Administrator only as a compatibility fallback after a 401, 403, or SOAP authorization fault. Override on the host.'
         - macro: '{$CUC.CERT.DISASTER}'
           value: '7'
           description: 'High certificate expiry threshold in days.'
@@ -2029,10 +2041,10 @@ zabbix_export:
           description: 'Exact Unity node hostname used in PerfMon counter paths.'
         - macro: '{$CUC.OS.PASSWORD}'
           type: SECRET_TEXT
-          description: 'Cisco VOS operating-system administrator password; override on the host.'
+          description: 'Secret password for the dedicated read-only Cisco VOS Certificate Management account in {$CUC.OS.USER}. Override on the host.'
         - macro: '{$CUC.OS.USER}'
           value: os-monitor
-          description: 'Cisco VOS operating-system monitoring account; override on the host.'
+          description: 'Dedicated Cisco VOS Certificate Management account created with privilege 0 (read APIs only). Override on the host.'
         - macro: '{$CUC.PARTITION.HIGH}'
           value: '92'
           description: 'Partition high threshold in percent.'
@@ -2070,7 +2082,7 @@ zabbix_export:
           value: '1'
           description: 'Set to 1 when this Unity Connection node must have a phone system, port group, and voice ports.'
         - macro: '{$CUC.TEMPLATE.VERSION}'
-          value: 1.3.0
+          value: 1.3.1
           description: 'Semantic release version of this Unity Connection template export.'
         - macro: '{$CUC.URL}'
           value: 'https://cuc.example.invalid'

@@ -5,17 +5,19 @@
 Monitors Cisco Unity Connection 15 through read-only VMREST/CUPI, Cisco
 Serviceability PerfMon, ControlCenter SOAP, and Cisco VOS Certificate
 Management APIs. The template is exported for Zabbix 7.0 and has template
-release version `1.3.0` in `{$CUC.TEMPLATE.VERSION}`.
+release version `1.3.1` in `{$CUC.TEMPLATE.VERSION}`.
 
 Maintainer: DevYves89
 
 ## Requirements
 
 - Zabbix Server or Proxy 7.0 with network access to the Unity HTTPS endpoints.
-- A least-privilege Unity monitoring account named `zbx_monitor` (or an
-  equivalent account) with read-only VMREST/CUPI and Serviceability access.
-- A separate least-privilege Cisco VOS account for Certificate Management when
-  certificate discovery is enabled.
+- A dedicated Unity user without a mailbox and with **Read Only Administrator**
+  for GET-only VMREST/CUPI and Serviceability monitoring. If a particular CUC
+  release rejects a required read endpoint, **System Administrator** is the
+  documented compatibility fallback.
+- A separate Cisco VOS Certificate Management account created with privilege
+  `0` (read APIs only) when certificate discovery is enabled.
 - TLS trust configured at the Zabbix Server or Proxy for production systems.
 
 ## Configuration
@@ -28,13 +30,18 @@ Link the template to one Unity Connection node and set these host macros:
 | `{$CUC.SERVICEABILITY.URL}` | yes | Cisco Serviceability SOAP base URL, normally port 8443. |
 | `{$CUC.CERT.URL}` | certificate only | Cisco VOS Certificate Management base URL. |
 | `{$CUC.API.USER}` / `{$CUC.API.PASSWORD}` | yes | Read-only Unity account and secret password. |
-| `{$CUC.OS.USER}` / `{$CUC.OS.PASSWORD}` | certificate only | Read-only VOS account and secret password. |
+| `{$CUC.OS.USER}` / `{$CUC.OS.PASSWORD}` | certificate only | Separate privilege-0 VOS Certificate Management account and secret password. |
 | `{$CUC.NODE}` | yes | Exact Unity node name used in PerfMon counter paths. |
 | `{$CUC.HTTP.PROXY}` | no | HTTP proxy URL for HTTP-agent collectors; empty means direct connection. |
 
 Configure the supplied interval, threshold, and discovery-exclusion macros to
 match the local deployment. `{$CUC.TELEPHONY.REQUIRED}` controls whether the
 Unity telephony baseline is considered mandatory for alerts.
+
+Cisco documents the application roles in the [Unity Connection 15 System
+Administration Guide](https://www.cisco.com/c/en/us/td/docs/voice_ip_comm/connection/15/administration/guide/b_15cucsag/b_12xcucsag_chapter_010.html)
+and the privilege-0 platform account in the [Certificate Management
+authentication guide](https://developer.cisco.com/docs/certificate-management/authentication/).
 
 ## Metrics and alerts
 

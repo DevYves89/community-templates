@@ -5,17 +5,18 @@
 Monitors Cisco Unified Communications Manager 15 through read-only AXL,
 RISPort70, PerfMon, ControlCenter SOAP, and Cisco VOS Certificate Management
 APIs. The template is exported for Zabbix 7.0 and has template release version
-`1.3.0` in `{$CUCM.TEMPLATE.VERSION}`.
+`1.3.1` in `{$CUCM.TEMPLATE.VERSION}`.
 
 Maintainer: DevYves89
 
 ## Requirements
 
 - Zabbix Server or Proxy 7.0 with network access to the CUCM HTTPS endpoints.
-- A least-privilege CUCM API account named `zbx_monitor` (or an equivalent
-  account) with only the read permissions required by the enabled APIs.
-- A separate least-privilege Cisco VOS account for Certificate Management when
-  certificate discovery is enabled.
+- A dedicated CUCM application user assigned to **Standard CCM Server
+  Monitoring** and to a custom AXL read-only access control group containing
+  **Standard AXL API Users** plus **Standard AXL Read Only API Access**.
+- A separate Cisco VOS Certificate Management account created with privilege
+  `0` (read APIs only) when certificate discovery is enabled.
 - TLS trust configured at the Zabbix Server or Proxy for production systems.
 
 ## Configuration
@@ -25,11 +26,10 @@ Link the template to one CUCM node and set these host macros before collection:
 | Macro | Required | Purpose |
 |---|---:|---|
 | `{$CUCM.URL}` | yes | CUCM API base URL, including port 8443. |
-| `{$CUCM.API.HOST}` / `{$CUCM.API.USER}` | yes | CUCM PerfMon session endpoint hostname and API username. |
 | `{$CUCM.FQDN}` | yes | Node FQDN for the independent HTTPS reachability check. |
-| `{$CUCM.USER}` / `{$CUCM.PASSWORD}` | yes | Read-only CUCM API account and secret password. |
+| `{$CUCM.API.USER}` / `{$CUCM.API.PASSWORD}` | yes | Shared read-only AXL, PerfMon, RISPort70, and ControlCenter account and secret password. |
 | `{$CUCM.NODE}` | yes | Exact CUCM node name used in PerfMon counter paths. |
-| `{$CUCM.OS.USER}` / `{$CUCM.OS.PASSWORD}` | certificate only | Read-only VOS Certificate Management account and secret password. |
+| `{$CUCM.OS.USER}` / `{$CUCM.OS.PASSWORD}` | certificate only | Separate privilege-0 VOS Certificate Management account and secret password. |
 | `{$CUCM.HTTP.PROXY}` | no | HTTP proxy URL for HTTP-agent collectors; empty means direct connection. |
 
 Threshold, discovery-filter, expected-service, and polling macros are
@@ -37,6 +37,13 @@ documented in the template itself. Keep `{$CUCM.DB.REPLICATION.EXPECTED}` at
 `0` on standalone Publishers; set it to `1` only when replication is known to
 be expected. Service outage triggers are opt-in through the contextual
 `{$CUCM.SERVICE.EXPECTED:"<service name>"}` macro.
+
+Cisco documents the required access in the [AXL authentication
+guide](https://developer.cisco.com/docs/axl/authentication/), [PerfMon getting
+started guide](https://developer.cisco.com/site/sxml/learn/getting-started/perfmon/),
+[RISPort getting started guide](https://developer.cisco.com/site/sxml/learn/getting-started/risport/),
+and [Certificate Management authentication
+guide](https://developer.cisco.com/docs/certificate-management/authentication/).
 
 ## Metrics and alerts
 
@@ -49,7 +56,8 @@ be expected. Service outage triggers are opt-in through the contextual
 - Certificate discovery with expiry, Subject, Issuer, and SAN metadata.
 - SIP-trunk PerfMon call statistics; runtime registration is deliberately not
   inferred when RIS has no runtime record.
-- A full-HD overview dashboard for CPU, memory, and swap utilization.
+- A full-HD operations dashboard for DB replication, memory, registered
+  phones, SIP trunks, call activity, and AXL throttling/utilization.
 
 Raw transport/master items are tagged `scope=internal`; operator-facing items
 are tagged `scope=operator`. Configure the discovery exclusion macros for the
