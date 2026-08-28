@@ -39,6 +39,8 @@ proxy and enable both checks before production use.
 
 ## Metrics and alerts
 
+- RTMT-inspired operations overview with PerfMon/ControlCenter health, system
+  performance, IM&P workload, and current problems.
 - PerfMon and ControlCenter collection health.
 - CPU utilization, free physical memory, memory utilization, used swap, and
   total swap.

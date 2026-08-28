@@ -63,8 +63,8 @@ guide](https://developer.cisco.com/docs/certificate-management/authentication/).
 - SIP-trunk PerfMon call statistics plus bounded RISPort70 registration and
   registering-node discovery. A valid absent runtime record remains absent and
   is never fabricated as Down.
-- A full-HD operations dashboard for DB replication, memory, registered
-  phones, SIP trunks, call activity, and AXL throttling/utilization.
+- An RTMT-inspired operations overview with common health/system/workload
+  summary cards, performance graphs, AXL throttling, and current problems.
 
 Raw transport/master items are tagged `scope=internal`; operator-facing items
 are tagged `scope=operator`. Configure the discovery exclusion macros for the

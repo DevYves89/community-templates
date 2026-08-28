@@ -55,8 +55,8 @@ authentication guide](https://developer.cisco.com/docs/certificate-management/au
 - ControlCenter service discovery and state.
 - Identity-certificate discovery with UTC expiry, Subject/Issuer CN, full DN,
   and SAN metadata from the existing PEM snapshot.
-- Independent HTTPS reachability and an operator dashboard covering collection
-  health, telephony, messaging, replication, certificates, and problems.
+- Independent HTTPS reachability and an RTMT-inspired operations overview with
+  common health/system/workload summary cards and current problems.
 
 Raw transport/master items are tagged `scope=internal`; operator-facing items
 are tagged `scope=operator`. The template collects only read-only endpoints

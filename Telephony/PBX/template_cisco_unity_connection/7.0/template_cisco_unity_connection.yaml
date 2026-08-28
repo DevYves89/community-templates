@@ -2579,7 +2579,7 @@ zabbix_export:
           description: 'Unity base URL without trailing slash. Override on the host.'
       dashboards:
         - uuid: 4a46f64d44b846bf9a72f827db1cf5d3
-          name: 'Unity Connection overview'
+          name: 'CUC operations overview'
           pages:
             - name: Overview
               widgets:
@@ -2600,59 +2600,8 @@ zabbix_export:
                       name: show
                       value: '4'
                 - type: item
-                  name: 'Voice-port utilization'
+                  name: 'Cluster replication'
                   x: '12'
-                  width: '12'
-                  height: '5'
-                  fields:
-                    - type: ITEM
-                      name: itemid
-                      value:
-                        host: 'Cisco Unity Connection 15 by API'
-                        key: cuc.ports.util
-                    - type: INTEGER
-                      name: show
-                      value: '2'
-                    - type: INTEGER
-                      name: show
-                      value: '4'
-                - type: item
-                  name: 'Message queue'
-                  x: '24'
-                  width: '12'
-                  height: '5'
-                  fields:
-                    - type: ITEM
-                      name: itemid
-                      value:
-                        host: 'Cisco Unity Connection 15 by API'
-                        key: cuc.message.queue.current
-                    - type: INTEGER
-                      name: show
-                      value: '2'
-                    - type: INTEGER
-                      name: show
-                      value: '4'
-                - type: item
-                  name: 'VMREST throttling'
-                  x: '36'
-                  width: '12'
-                  height: '5'
-                  fields:
-                    - type: ITEM
-                      name: itemid
-                      value:
-                        host: 'Cisco Unity Connection 15 by API'
-                        key: cuc.vmrest.throttled.last_hour
-                    - type: INTEGER
-                      name: show
-                      value: '2'
-                    - type: INTEGER
-                      name: show
-                      value: '4'
-                - type: item
-                  name: 'Replication latency'
-                  x: '48'
                   width: '12'
                   height: '5'
                   fields:
@@ -2668,7 +2617,58 @@ zabbix_export:
                       name: show
                       value: '4'
                 - type: item
-                  name: 'Voice sessions'
+                  name: 'CPU utilization'
+                  x: '24'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.cpu.util
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'Memory utilization'
+                  x: '36'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.memory.util
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'Primary workload: voice ports'
+                  x: '48'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.ports.util
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'Secondary workload: message queue'
                   x: '60'
                   width: '12'
                   height: '5'
@@ -2677,7 +2677,7 @@ zabbix_export:
                       name: itemid
                       value:
                         host: 'Cisco Unity Connection 15 by API'
-                        key: cuc.voice.sessions.current
+                        key: cuc.message.queue.current
                     - type: INTEGER
                       name: show
                       value: '2'
@@ -2685,7 +2685,7 @@ zabbix_export:
                       name: show
                       value: '4'
                 - type: svggraph
-                  name: 'Unity Connection utilization, in %'
+                  name: 'System performance'
                   'y': '5'
                   width: '72'
                   height: '10'
@@ -2736,7 +2736,7 @@ zabbix_export:
                       name: show_problems
                       value: '1'
                 - type: svggraph
-                  name: 'Calls, sessions, and message throughput'
+                  name: 'Service workload'
                   'y': '15'
                   width: '72'
                   height: '10'
@@ -2789,7 +2789,7 @@ zabbix_export:
                       name: show_problems
                       value: '1'
                 - type: problems
-                  name: 'Unity Connection problems'
+                  name: 'Current problems'
                   'y': '25'
                   width: '72'
                   height: '8'

@@ -2271,7 +2271,7 @@ zabbix_export:
             - name: Overview
               widgets:
                 - type: item
-                  name: 'DB replication'
+                  name: 'Collection health'
                   width: '12'
                   height: '5'
                   fields:
@@ -2279,7 +2279,7 @@ zabbix_export:
                       name: itemid
                       value:
                         host: 'Cisco Unified Communications Manager 15 by API'
-                        key: cucm.system.dbreplication
+                        key: cucm.api.perfmon.health
                     - type: INTEGER
                       name: show
                       value: '2'
@@ -2287,7 +2287,7 @@ zabbix_export:
                       name: show
                       value: '4'
                 - type: svggraph
-                  name: 'Node utilization, in %'
+                  name: 'System performance'
                   'y': '5'
                   width: '36'
                   height: '10'
@@ -2381,8 +2381,42 @@ zabbix_export:
                       name: show_problems
                       value: '1'
                 - type: item
-                  name: 'Memory utilization'
+                  name: 'Cluster replication'
                   x: '12'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.system.dbreplication
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'CPU utilization'
+                  x: '24'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.cpu.util
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'Memory utilization'
+                  x: '36'
                   width: '12'
                   height: '5'
                   fields:
@@ -2397,42 +2431,8 @@ zabbix_export:
                     - type: INTEGER
                       name: show
                       value: '4'
-                - type: item
-                  name: 'Registered hardware phones'
-                  x: '24'
-                  width: '12'
-                  height: '5'
-                  fields:
-                    - type: ITEM
-                      name: itemid
-                      value:
-                        host: 'Cisco Unified Communications Manager 15 by API'
-                        key: cucm.callmanager.registered.hardware
-                    - type: INTEGER
-                      name: show
-                      value: '2'
-                    - type: INTEGER
-                      name: show
-                      value: '4'
-                - type: item
-                  name: 'Active SIP trunks'
-                  x: '36'
-                  width: '12'
-                  height: '5'
-                  fields:
-                    - type: ITEM
-                      name: itemid
-                      value:
-                        host: 'Cisco Unified Communications Manager 15 by API'
-                        key: cucm.sip.trunks.count
-                    - type: INTEGER
-                      name: show
-                      value: '2'
-                    - type: INTEGER
-                      name: show
-                      value: '4'
                 - type: svggraph
-                  name: 'Endpoint and SIP-trunk activity'
+                  name: 'Service workload'
                   x: '36'
                   'y': '5'
                   width: '36'
@@ -2524,8 +2524,25 @@ zabbix_export:
                       name: show_problems
                       value: '1'
                 - type: item
-                  name: 'AXL throttle state'
+                  name: 'Primary workload: registered phones'
                   x: '48'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.callmanager.registered.hardware
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'Secondary workload: AXL throttling'
+                  x: '60'
                   width: '12'
                   height: '5'
                   fields:
@@ -2540,23 +2557,30 @@ zabbix_export:
                     - type: INTEGER
                       name: show
                       value: '4'
-                - type: item
-                  name: 'AXL throttle events'
-                  x: '60'
-                  width: '12'
-                  height: '5'
+                - type: problems
+                  name: 'Current problems'
+                  'y': '25'
+                  width: '72'
+                  height: '8'
                   fields:
-                    - type: ITEM
-                      name: itemid
-                      value:
-                        host: 'Cisco Unified Communications Manager 15 by API'
-                        key: cucm.axl.throttle.events.delta
+                    - type: STRING
+                      name: reference
+                      value: CUCMPR
                     - type: INTEGER
-                      name: show
+                      name: severities.0
+                      value: '1'
+                    - type: INTEGER
+                      name: severities.1
                       value: '2'
                     - type: INTEGER
-                      name: show
+                      name: severities.2
+                      value: '3'
+                    - type: INTEGER
+                      name: severities.3
                       value: '4'
+                    - type: INTEGER
+                      name: severities.4
+                      value: '5'
       valuemaps:
         - uuid: 11b7d6fd1cd14cd1a0423ee801000026
           name: 'CUCM AXL throttle state'
