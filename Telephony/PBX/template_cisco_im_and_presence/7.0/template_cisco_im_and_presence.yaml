@@ -1,0 +1,379 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: 1d12408342854fd5a4436dd6d5d1bd4a
+      name: Templates/Telephony
+  templates:
+    - uuid: 77c9e59f51b94db79cc3c780cff96000
+      template: 'Cisco IM and Presence 15 by API'
+      name: 'Cisco IM and Presence 15 by API'
+      description: 'Cisco IM and Presence 15 (CUP) baseline monitoring through read-only Cisco Serviceability PerfMon and ControlCenter SOAP. It covers API health, CPU, memory, swap, SIP Proxy sessions, Presence Engine sessions/subscriptions, and the critical-service raw snapshot. Operator values use scope=operator; XML payloads use scope=internal. Maintainer: DevYves89.'
+      vendor:
+        name: Zabbix
+        version: 7.0-0
+      groups:
+        - name: Templates/Telephony
+      items:
+        - uuid: 77c9e59f51b94db79cc3c780cff96001
+          name: 'CUP internal: PerfMon processor raw/master'
+          type: HTTP_AGENT
+          key: cup.perfmon.processor.raw
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUP.API.USER}'
+          password: '{$CUP.API.PASSWORD}'
+          timeout: '{$CUP.API.TIMEOUT}'
+          url: '{$CUP.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService'
+          posts: '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:n="http://schemas.cisco.com/ast/soap"><s:Body><n:perfmonCollectCounterData><n:Host>{$CUP.NODE}</n:Host><n:Object>Processor</n:Object></n:perfmonCollectCounterData></s:Body></s:Envelope>'
+          headers:
+            - name: Content-Type
+              value: 'text/xml; charset=utf-8'
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          verify_peer: 'NO'
+          verify_host: 'NO'
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: 77c9e59f51b94db79cc3c780cff96008
+          name: 'CUP: PerfMon API health'
+          type: DEPENDENT
+          key: cup.api.perfmon.health
+          value_type: UNSIGNED
+          description: '1 when the authenticated PerfMon SOAP request returns valid counter data; 0 on a SOAP fault or invalid response.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'if(/<[^>]*Fault[ >]/i.test(value)||!/<[^>]*CStatus>/i.test(value))return 0;return 1;'
+          master_item:
+            key: cup.perfmon.processor.raw
+          valuemap:
+            name: 'Service state'
+          tags:
+            - tag: component
+              value: api
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 77c9e59f51b94db79cc3c780cff96009
+              expression: 'max(/Cisco IM and Presence 15 by API/cup.api.perfmon.health,5m)=0'
+              name: 'CUP: PerfMon API is unavailable or returned an invalid response'
+              priority: HIGH
+        - uuid: 77c9e59f51b94db79cc3c780cff96010
+          name: 'CUP: ControlCenter API health'
+          type: DEPENDENT
+          key: cup.api.controlcenter.health
+          value_type: UNSIGNED
+          description: '1 when the authenticated ControlCenter SOAP request returns a response without a SOAP fault.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'if(/<[^>]*Fault[ >]/i.test(value)||!/<[^>]*(?:ServiceStatus|Status)>/i.test(value))return 0;return 1;'
+          master_item:
+            key: cup.control.services.raw
+          valuemap:
+            name: 'Service state'
+          tags:
+            - tag: component
+              value: api
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 77c9e59f51b94db79cc3c780cff96011
+              expression: 'max(/Cisco IM and Presence 15 by API/cup.api.controlcenter.health,5m)=0'
+              name: 'CUP: ControlCenter API is unavailable or returned an invalid response'
+              priority: HIGH
+        - uuid: 77c9e59f51b94db79cc3c780cff96012
+          name: 'CUP: free memory'
+          type: DEPENDENT
+          key: cup.memory.free
+          value_type: FLOAT
+          units: B
+          description: 'Free physical memory reported by Cisco VOS PerfMon.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("Free KBytes"),r;if(p<0)throw "counter absent";r=/<[^>]*Value>\\s*([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1])*1024;'
+          master_item:
+            key: cup.perfmon.memory.raw
+          tags:
+            - tag: component
+              value: memory
+            - tag: scope
+              value: operator
+        - uuid: 77c9e59f51b94db79cc3c780cff96013
+          name: 'CUP: used swap'
+          type: DEPENDENT
+          key: cup.swap.used
+          value_type: FLOAT
+          units: B
+          description: 'Used swap memory reported by Cisco VOS PerfMon.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("Used Swap KBytes"),r;if(p<0)throw "counter absent";r=/<[^>]*Value>\\s*([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1])*1024;'
+          master_item:
+            key: cup.perfmon.memory.raw
+          tags:
+            - tag: component
+              value: memory
+            - tag: scope
+              value: operator
+        - uuid: 77c9e59f51b94db79cc3c780cff96014
+          name: 'CUP: total swap'
+          type: DEPENDENT
+          key: cup.swap.total
+          value_type: FLOAT
+          units: B
+          description: 'Total swap memory reported by Cisco VOS PerfMon.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("Total Swap KBytes"),r;if(p<0)throw "counter absent";r=/<[^>]*Value>\\s*([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1])*1024;'
+          master_item:
+            key: cup.perfmon.memory.raw
+          tags:
+            - tag: component
+              value: memory
+            - tag: scope
+              value: operator
+        - uuid: 77c9e59f51b94db79cc3c780cff96015
+          name: 'CUP internal: PerfMon SIP Proxy raw/master'
+          type: HTTP_AGENT
+          key: cup.perfmon.sipproxy.raw
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUP.API.USER}'
+          password: '{$CUP.API.PASSWORD}'
+          timeout: '{$CUP.API.TIMEOUT}'
+          url: '{$CUP.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService'
+          posts: '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:n="http://schemas.cisco.com/ast/soap"><s:Body><n:perfmonCollectCounterData><n:Host>{$CUP.NODE}</n:Host><n:Object>Cisco SIP Proxy</n:Object></n:perfmonCollectCounterData></s:Body></s:Envelope>'
+          headers:
+            - name: Content-Type
+              value: 'text/xml; charset=utf-8'
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          verify_peer: 'NO'
+          verify_host: 'NO'
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: 77c9e59f51b94db79cc3c780cff96016
+          name: 'CUP: active SIP proxy sessions'
+          type: DEPENDENT
+          key: cup.sipproxy.sessions.active
+          value_type: UNSIGNED
+          description: 'Active IM Control SIP sessions reported by Cisco SIP Proxy.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("IMCTRLActiveSessions"),r;if(p<0)throw "counter absent";r=/<[^>]*Value>\\s*([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);'
+          master_item:
+            key: cup.perfmon.sipproxy.raw
+          tags:
+            - tag: component
+              value: sip
+            - tag: scope
+              value: operator
+        - uuid: 77c9e59f51b94db79cc3c780cff96017
+          name: 'CUP internal: PerfMon Presence Engine raw/master'
+          type: HTTP_AGENT
+          key: cup.perfmon.presence.raw
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUP.API.USER}'
+          password: '{$CUP.API.PASSWORD}'
+          timeout: '{$CUP.API.TIMEOUT}'
+          url: '{$CUP.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService'
+          posts: '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:n="http://schemas.cisco.com/ast/soap"><s:Body><n:perfmonCollectCounterData><n:Host>{$CUP.NODE}</n:Host><n:Object>Cisco Presence Engine</n:Object></n:perfmonCollectCounterData></s:Body></s:Envelope>'
+          headers:
+            - name: Content-Type
+              value: 'text/xml; charset=utf-8'
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          verify_peer: 'NO'
+          verify_host: 'NO'
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: 77c9e59f51b94db79cc3c780cff96018
+          name: 'CUP: active IM sessions'
+          type: DEPENDENT
+          key: cup.presence.im.sessions.active
+          value_type: UNSIGNED
+          description: 'Active instant-messaging sessions reported by Cisco Presence Engine.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("ActiveIMSessions"),r;if(p<0)throw "counter absent";r=/<[^>]*Value>\\s*([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);'
+          master_item:
+            key: cup.perfmon.presence.raw
+          tags:
+            - tag: component
+              value: presence
+            - tag: scope
+              value: operator
+        - uuid: 77c9e59f51b94db79cc3c780cff96019
+          name: 'CUP: active presence subscriptions'
+          type: DEPENDENT
+          key: cup.presence.subscriptions.active
+          value_type: UNSIGNED
+          description: 'Active presence subscriptions reported by Cisco Presence Engine.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("ActiveSubscriptions"),r;if(p<0)throw "counter absent";r=/<[^>]*Value>\\s*([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);'
+          master_item:
+            key: cup.perfmon.presence.raw
+          tags:
+            - tag: component
+              value: presence
+            - tag: scope
+              value: operator
+        - uuid: 77c9e59f51b94db79cc3c780cff96002
+          name: 'CUP: CPU utilization'
+          type: DEPENDENT
+          key: cup.cpu.util
+          value_type: FLOAT
+          units: '%'
+          description: 'Total CPU utilization reported by the Cisco VOS Processor PerfMon object.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("Processor(_Total)\\% CPU Time"),r;if(p<0)throw "counter absent";r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(value.slice(p));if(!r||![0,1].includes(Number(r[2])))throw "counter invalid";return Number(r[1]);'
+          master_item:
+            key: cup.perfmon.processor.raw
+          tags:
+            - tag: component
+              value: cpu
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 77c9e59f51b94db79cc3c780cff96003
+              expression: 'min(/Cisco IM and Presence 15 by API/cup.cpu.util,10m)>{$CUP.CPU.WARN} and min(/Cisco IM and Presence 15 by API/cup.cpu.util,10m)<={$CUP.CPU.HIGH}'
+              name: 'CUP: CPU utilization is elevated'
+              priority: WARNING
+            - uuid: 77c9e59f51b94db79cc3c780cff96004
+              expression: 'min(/Cisco IM and Presence 15 by API/cup.cpu.util,10m)>{$CUP.CPU.HIGH}'
+              name: 'CUP: CPU utilization is high'
+              priority: HIGH
+        - uuid: 77c9e59f51b94db79cc3c780cff96005
+          name: 'CUP internal: PerfMon memory raw/master'
+          type: HTTP_AGENT
+          key: cup.perfmon.memory.raw
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUP.API.USER}'
+          password: '{$CUP.API.PASSWORD}'
+          timeout: '{$CUP.API.TIMEOUT}'
+          url: '{$CUP.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService'
+          posts: '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:n="http://schemas.cisco.com/ast/soap"><s:Body><n:perfmonCollectCounterData><n:Host>{$CUP.NODE}</n:Host><n:Object>Memory</n:Object></n:perfmonCollectCounterData></s:Body></s:Envelope>'
+          headers:
+            - name: Content-Type
+              value: 'text/xml; charset=utf-8'
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          verify_peer: 'NO'
+          verify_host: 'NO'
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: 77c9e59f51b94db79cc3c780cff96006
+          name: 'CUP: memory utilization'
+          type: DEPENDENT
+          key: cup.memory.util
+          value_type: FLOAT
+          units: '%'
+          description: 'Physical memory utilization reported by Cisco VOS PerfMon.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var p=value.indexOf("% Mem Used"),r;if(p<0)throw "counter absent";r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(value.slice(p));if(!r||![0,1].includes(Number(r[2])))throw "counter invalid";return Number(r[1]);'
+          master_item:
+            key: cup.perfmon.memory.raw
+          tags:
+            - tag: component
+              value: memory
+            - tag: scope
+              value: operator
+        - uuid: 77c9e59f51b94db79cc3c780cff96007
+          name: 'CUP internal: ControlCenter critical services raw/master'
+          type: HTTP_AGENT
+          key: cup.control.services.raw
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUP.API.USER}'
+          password: '{$CUP.API.PASSWORD}'
+          timeout: '{$CUP.API.TIMEOUT}'
+          url: '{$CUP.SERVICEABILITY.URL}/controlcenterservice2/services/ControlCenterServices'
+          posts: '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:n="http://schemas.cisco.com/ast/soap"><s:Body><n:soapGetServiceStatus><n:ServiceStatus>Cisco Tomcat</n:ServiceStatus><n:ServiceStatus>SOAP -Performance Monitoring APIs</n:ServiceStatus><n:ServiceStatus>Cisco SIP Proxy</n:ServiceStatus><n:ServiceStatus>Cisco Presence Engine</n:ServiceStatus><n:ServiceStatus>Cisco XCP Connection Manager</n:ServiceStatus><n:ServiceStatus>Cisco XCP Authentication Service</n:ServiceStatus></n:soapGetServiceStatus></s:Body></s:Envelope>'
+          headers:
+            - name: Content-Type
+              value: 'text/xml; charset=utf-8'
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          verify_peer: 'NO'
+          verify_host: 'NO'
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+      valuemaps:
+        - uuid: 77c9e59f51b94db79cc3c780cff96020
+          name: 'Service state'
+          mappings:
+            - value: '0'
+              newvalue: Unavailable
+            - value: '1'
+              newvalue: Available
+      macros:
+        - macro: '{$CUP.URL}'
+          value: https://cup.example.invalid
+          description: 'CUP web base URL without a trailing slash. Override on the host.'
+        - macro: '{$CUP.SERVICEABILITY.URL}'
+          value: https://cup.example.invalid:8443
+          description: 'CUP Serviceability SOAP base URL. Override on the host.'
+        - macro: '{$CUP.NODE}'
+          value: cup-pub
+          description: 'Exact local CUP PerfMon node name.'
+        - macro: '{$CUP.API.USER}'
+          value: zabbix-monitor
+          description: 'Dedicated read-only CUP Serviceability account.'
+        - macro: '{$CUP.API.PASSWORD}'
+          type: SECRET_TEXT
+          value: CHANGE_ME
+          description: 'Secret password for the CUP Serviceability account.'
+        - macro: '{$CUP.API.TIMEOUT}'
+          value: 30s
+          description: 'Timeout for a single CUP API request.'
+        - macro: '{$CUP.ROLE}'
+          value: publisher
+          description: 'CUP node role: publisher or subscriber. Operator context only.'
+        - macro: '{$CUP.SERVICES.CRITICAL}'
+          value: 'Cisco Tomcat|SOAP -Performance Monitoring APIs|Cisco SIP Proxy|Cisco Presence Engine|Cisco XCP Connection Manager|Cisco XCP Authentication Service'
+          description: 'Regular expression defining services that are operationally critical. Optional CUP services are intentionally excluded.'
+        - macro: '{$CUP.CPU.WARN}'
+          value: '80'
+          description: 'CPU warning threshold in percent.'
+        - macro: '{$CUP.CPU.HIGH}'
+          value: '95'
+          description: 'CPU high threshold in percent.'
