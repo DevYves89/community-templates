@@ -7,7 +7,7 @@ zabbix_export:
     - uuid: 1d6c69fc149a48febbf6a61ce8dc3d33
       template: 'Cisco Unity Connection 15 by API'
       name: 'Cisco Unity Connection 15 by API'
-      description: 'Cisco Unity Connection 15 monitoring through read-only VMREST/CUPI, Cisco Serviceability PerfMon and ControlCenter SOAP, and the Cisco VOS Certificate Management API. Before linking, create a dedicated Unity user without a mailbox and assign Read Only Administrator for GET-only VMREST/CUPI and Serviceability monitoring; use System Administrator only as a compatibility fallback if the installed release rejects a required read endpoint. Store it in {$CUC.API.USER} and {$CUC.API.PASSWORD}. For certificate discovery, create a separate Cisco VOS account with certificate-API privilege 0 (read only) and store it in {$CUC.OS.USER} and {$CUC.OS.PASSWORD}. Set the endpoint and node macros on the host. Operator items use scope=operator; transport/master payloads use scope=internal.'
+      description: 'Cisco Unity Connection 15 monitoring through read-only VMREST/CUPI, Cisco Serviceability PerfMon and ControlCenter SOAP, and the Cisco VOS Certificate Management API. Before linking, create a dedicated Unity user without a mailbox and assign Read Only Administrator for GET-only VMREST/CUPI and Serviceability monitoring; use System Administrator only as a compatibility fallback if the installed release rejects a required read endpoint. Store it in {$CUC.API.USER} and {$CUC.API.PASSWORD}. For certificate discovery, create a separate Cisco VOS account with certificate-API privilege 0 (read only) and store it in {$CUC.OS.USER} and {$CUC.OS.PASSWORD}. Set {$CUC.URL}, {$CUC.SERVICEABILITY.URL}, {$CUC.CERT.URL}, {$CUC.NODE}, and {$CUC.FQDN} on the host. Enable replication alerting only on a clustered node by setting {$CUC.REPLICATION.EXPECTED}=1. Operator items use scope=operator; transport/master payloads use scope=internal.'
       groups:
         - name: Templates/Telephony
       items:
@@ -214,7 +214,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Call Count Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Call Count Current";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Call Count Current",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Call Count Current";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -234,7 +234,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Call Duration Average [s]",p=value.indexOf(marker);if(p<0)throw "counter absent: Call Duration Average [s]";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Call Duration Average [s]",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Call Duration Average [s]";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -253,7 +253,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Incoming Calls Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Incoming Calls Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Incoming Calls Total",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Incoming Calls Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -272,7 +272,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Missed Call Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Missed Call Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Missed Call Total",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Missed Call Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -291,7 +291,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Call Count Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Call Count Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Call Count Total",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Call Count Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -310,7 +310,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Calls Unanswered Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Calls Unanswered Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Calls Unanswered Total",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Calls Unanswered Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -318,6 +318,421 @@ zabbix_export:
               value: telephony
             - tag: scope
               value: operator
+        - uuid: 1b9ef8cfa3324afc91f87ffefc7c5f01
+          name: 'CUC internal: PerfMon VMREST counters raw/master'
+          type: HTTP_AGENT
+          key: cuc.perfmon.vmrest.raw
+          delay: 5m
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUC.API.USER}'
+          password: '{$CUC.API.PASSWORD}'
+          description: 'Internal transport/master item for the CUC VMREST Container object, which represents external REST-client threads and throttling. One read-only PerfMon request runs every five minutes.'
+          timeout: '{$CUC.API.TIMEOUT}'
+          url: '{$CUC.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService'
+          http_proxy: '{$CUC.HTTP.PROXY}'
+          posts: '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:n="http://schemas.cisco.com/ast/soap"><s:Body><n:perfmonCollectCounterData><n:Host>{$CUC.NODE}</n:Host><n:Object>CUC VMREST Container</n:Object></n:perfmonCollectCounterData></s:Body></s:Envelope>'
+          headers:
+            - name: Content-Type
+              value: text/xml
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: f368161f4a304aa8a76c3f31a8716511
+          name: 'CUC: VMREST active threads'
+          type: DEPENDENT
+          key: cuc.vmrest.threads.active
+          delay: '0'
+          status: DISABLED
+          history: 30d
+          units: threads
+          description: 'Threads currently active in the Unity VMREST Container. Disabled by default because some Unity 15 builds expose the documented object but return no counters; enable only after the raw master proves the counter exists.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC VMREST Container\\Total VMREST CONTAINER active threads",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Total VMREST CONTAINER active threads";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0||Math.floor(n)!==n)throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.vmrest.raw
+          tags:
+            - tag: component
+              value: api
+            - tag: scope
+              value: operator
+        - uuid: 127ca378e48b485c97166995673c4fab
+          name: 'CUC: VMREST throttled requests delta'
+          type: DEPENDENT
+          key: cuc.vmrest.throttled.delta
+          delay: '0'
+          status: DISABLED
+          history: 30d
+          units: requests
+          description: 'New VMREST requests throttled since the preceding five-minute PerfMon poll. Disabled by default; enable only after the raw master proves the VMREST Container counter family exists on this Unity build.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC VMREST Container\\Total VMREST CONTAINER throttled Requests",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Total VMREST CONTAINER throttled Requests";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0||Math.floor(n)!==n)throw "counter value invalid";return n;'
+            - type: SIMPLE_CHANGE
+              parameters:
+                - ''
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1h
+          master_item:
+            key: cuc.perfmon.vmrest.raw
+          tags:
+            - tag: component
+              value: api
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: d780bc3693a2489e81fb99c56e70f7bb
+              expression: 'last(/Cisco Unity Connection 15 by API/cuc.vmrest.throttled.delta)>0'
+              name: 'CUC VMREST throttled new requests'
+              opdata: 'New throttled requests: {ITEM.LASTVALUE1}'
+              priority: WARNING
+              description: 'Unity Connection throttled one or more VMREST requests. Review external client load, active threads, and collection intervals.'
+              tags:
+                - tag: component
+                  value: api
+        - uuid: 294fd61f859d4716a60c3ff1dd563336
+          name: 'CUC: VMREST throttled requests in last hour'
+          type: DEPENDENT
+          key: cuc.vmrest.throttled.last_hour
+          delay: '0'
+          status: DISABLED
+          history: 30d
+          units: requests
+          description: 'VMREST requests throttled by Unity Connection during the preceding hour. Disabled by default; enable only after the raw master proves the VMREST Container counter family exists on this Unity build.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC VMREST Container\\Total VMREST CONTAINER throttled Requests in last hour",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Total VMREST CONTAINER throttled Requests in last hour";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0||Math.floor(n)!==n)throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.vmrest.raw
+          tags:
+            - tag: component
+              value: api
+            - tag: scope
+              value: operator
+        - uuid: 7823cba6be7c4128a9ee9974513fcd61
+          name: 'CUC internal: PerfMon Message Store counters raw/master'
+          type: HTTP_AGENT
+          key: cuc.perfmon.message_store.raw
+          delay: 5m
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUC.API.USER}'
+          password: '{$CUC.API.PASSWORD}'
+          description: 'Internal transport/master item for CUC Message Store queue, delivery, retry, and failure dependents.'
+          timeout: '{$CUC.API.TIMEOUT}'
+          url: '{$CUC.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService'
+          http_proxy: '{$CUC.HTTP.PROXY}'
+          posts: '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:n="http://schemas.cisco.com/ast/soap"><s:Body><n:perfmonCollectCounterData><n:Host>{$CUC.NODE}</n:Host><n:Object>CUC Message Store</n:Object></n:perfmonCollectCounterData></s:Body></s:Envelope>'
+          headers:
+            - name: Content-Type
+              value: text/xml
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: 48236bbe45514208bda1cdf4dad96912
+          name: 'CUC: message queue current'
+          type: DEPENDENT
+          key: cuc.message.queue.current
+          delay: '0'
+          history: 30d
+          units: messages
+          description: 'Messages currently queued in the Unity Connection message transfer agent.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Message Store\\Queued Messages Current",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Queued Messages Current";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0||Math.floor(n)!==n)throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.message_store.raw
+          tags:
+            - tag: component
+              value: messaging
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 97c407049ab24d3b848e942de6eb04d1
+              expression: 'min(/Cisco Unity Connection 15 by API/cuc.message.queue.current,10m)>={$CUC.MESSAGE.QUEUE.WARN}'
+              name: 'CUC message queue is persistently elevated'
+              opdata: 'Queued messages: {ITEM.LASTVALUE1}, warning threshold: {$CUC.MESSAGE.QUEUE.WARN}'
+              priority: WARNING
+              description: 'The Message Store queue remained at or above the configured threshold for ten minutes.'
+              tags:
+                - tag: component
+                  value: messaging
+        - uuid: 10b0e087e41f4a9aa267aee6b522b6d4
+          name: 'CUC: bad-mail messages delta'
+          type: DEPENDENT
+          key: cuc.message.bad_mail.delta
+          delay: '0'
+          history: 30d
+          units: messages
+          description: 'New messages placed in Bad Mail since the preceding five-minute poll.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Message Store\\Bad Mail Total",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Bad Mail Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0||Math.floor(n)!==n)throw "counter value invalid";return n;'
+            - type: SIMPLE_CHANGE
+              parameters:
+                - ''
+          master_item:
+            key: cuc.perfmon.message_store.raw
+          tags:
+            - tag: component
+              value: messaging
+            - tag: scope
+              value: operator
+        - uuid: 648c599a76174bfca021d7bea1d85d74
+          name: 'CUC: message retries delta'
+          type: DEPENDENT
+          key: cuc.message.retries.delta
+          delay: '0'
+          history: 30d
+          units: retries
+          description: 'New Message Store delivery retries since the preceding five-minute poll.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Message Store\\Retries Total",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Retries Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0||Math.floor(n)!==n)throw "counter value invalid";return n;'
+            - type: SIMPLE_CHANGE
+              parameters:
+                - ''
+          master_item:
+            key: cuc.perfmon.message_store.raw
+          tags:
+            - tag: component
+              value: messaging
+            - tag: scope
+              value: operator
+        - uuid: f075df4d18484979900f3e69e4944a14
+          name: 'CUC: messages received per minute'
+          type: DEPENDENT
+          key: cuc.message.received.rate
+          delay: '0'
+          history: 30d
+          units: messages/min
+          value_type: FLOAT
+          description: 'Messages received by the Unity Message Store during the most recent minute.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Message Store\\Messages Received Per Minute",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Messages Received Per Minute";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.message_store.raw
+          tags:
+            - tag: component
+              value: messaging
+            - tag: scope
+              value: operator
+        - uuid: 9db0dc49e0a146d5b41c7dd31fe65d15
+          name: 'CUC: messages delivered per minute'
+          type: DEPENDENT
+          key: cuc.message.delivered.rate
+          delay: '0'
+          history: 30d
+          units: messages/min
+          value_type: FLOAT
+          description: 'Delivery rate derived from the cumulative Messages Delivered Total counter over the polling interval.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Message Store\\Messages Delivered Total",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Messages Delivered Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0||Math.floor(n)!==n)throw "counter value invalid";return n;'
+            - type: CHANGE_PER_SECOND
+              parameters:
+                - ''
+            - type: MULTIPLIER
+              parameters:
+                - '60'
+          master_item:
+            key: cuc.perfmon.message_store.raw
+          tags:
+            - tag: component
+              value: messaging
+            - tag: scope
+              value: operator
+        - uuid: 56e7ec06b2a94cb49be44d0d39ed618e
+          name: 'CUC: messages undelivered because mailbox quota is full delta'
+          type: DEPENDENT
+          key: cuc.message.quota_full.delta
+          delay: '0'
+          history: 30d
+          units: messages
+          description: 'New messages that could not be delivered because the destination mailbox quota was full.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Message Store\\Messages Undelivered Mailbox Quota Full Notification Total",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Messages Undelivered Mailbox Quota Full Notification Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0||Math.floor(n)!==n)throw "counter value invalid";return n;'
+            - type: SIMPLE_CHANGE
+              parameters:
+                - ''
+          master_item:
+            key: cuc.perfmon.message_store.raw
+          tags:
+            - tag: component
+              value: messaging
+            - tag: scope
+              value: operator
+        - uuid: b695ad179d714d09a1b63301eec9ff02
+          name: 'CUC internal: PerfMon replication counters raw/master'
+          type: HTTP_AGENT
+          key: cuc.perfmon.replication.raw
+          delay: 5m
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          authtype: BASIC
+          username: '{$CUC.API.USER}'
+          password: '{$CUC.API.PASSWORD}'
+          description: 'Internal transport/master item for CUC file-replication latency, rate, and completed-file dependents.'
+          timeout: '{$CUC.API.TIMEOUT}'
+          url: '{$CUC.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService'
+          http_proxy: '{$CUC.HTTP.PROXY}'
+          posts: '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:n="http://schemas.cisco.com/ast/soap"><s:Body><n:perfmonCollectCounterData><n:Host>{$CUC.NODE}</n:Host><n:Object>CUC Replication</n:Object></n:perfmonCollectCounterData></s:Body></s:Envelope>'
+          headers:
+            - name: Content-Type
+              value: text/xml
+            - name: SOAPAction
+              value: '""'
+          request_method: POST
+          tags:
+            - tag: component
+              value: raw
+            - tag: scope
+              value: internal
+        - uuid: fd46f0a377754f2db0159937f57c7627
+          name: 'CUC: file replication latency'
+          type: DEPENDENT
+          key: cuc.replication.latency
+          delay: '0'
+          history: 30d
+          units: s
+          value_type: FLOAT
+          description: 'Seconds a file exists before Unity Connection starts replicating it.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Replication\\File Replication Latency [s]",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: File Replication Latency [s]";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.replication.raw
+          tags:
+            - tag: component
+              value: replication
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: b9ad9c987ece46f0a0fe297d97dd0c33
+              expression: '{$CUC.REPLICATION.EXPECTED}=1 and min(/Cisco Unity Connection 15 by API/cuc.replication.latency,15m)>={$CUC.REPLICATION.LATENCY.WARN}'
+              name: 'CUC file replication latency is elevated'
+              opdata: 'Latency: {ITEM.LASTVALUE1}, warning threshold: {$CUC.REPLICATION.LATENCY.WARN}s'
+              priority: WARNING
+              description: 'File replication is expected and latency remained above the configured threshold for 15 minutes.'
+              tags:
+                - tag: component
+                  value: replication
+        - uuid: a7d25a1286834422ab6ff754b2e23ea4
+          name: 'CUC: maximum file replication latency'
+          type: DEPENDENT
+          key: cuc.replication.latency.max
+          delay: '0'
+          history: 30d
+          units: s
+          value_type: FLOAT
+          description: 'Maximum file replication latency since the CUC replication service started.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Replication\\File Replication Latency Max [s]",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: File Replication Latency Max [s]";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+          master_item:
+            key: cuc.perfmon.replication.raw
+          tags:
+            - tag: component
+              value: replication
+            - tag: scope
+              value: operator
+        - uuid: 674ce3135632420f914d7f35ada64dcc
+          name: 'CUC: file replication transfer rate'
+          type: DEPENDENT
+          key: cuc.replication.rate
+          delay: '0'
+          history: 30d
+          units: Bps
+          value_type: FLOAT
+          description: 'Current CUC file replication transfer rate, converted from kilobytes per second to bytes per second.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Replication\\File Transfer Rate [kbytes/s]",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: File Transfer Rate [kbytes/s]";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+            - type: MULTIPLIER
+              parameters:
+                - '1024'
+          master_item:
+            key: cuc.perfmon.replication.raw
+          tags:
+            - tag: component
+              value: replication
+            - tag: scope
+              value: operator
+        - uuid: 4190269e49774381881f62766cb6d13c
+          name: 'CUC: files replicated delta'
+          type: DEPENDENT
+          key: cuc.replication.files.delta
+          delay: '0'
+          history: 30d
+          units: files
+          description: 'Files replicated since the preceding five-minute PerfMon poll.'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Replication\\Files Replicated Total",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Files Replicated Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0||Math.floor(n)!==n)throw "counter value invalid";return n;'
+            - type: SIMPLE_CHANGE
+              parameters:
+                - ''
+          master_item:
+            key: cuc.perfmon.replication.raw
+          tags:
+            - tag: component
+              value: replication
+            - tag: scope
+              value: operator
+        - uuid: d52d570c0e3c434faed9474d36bcf3ee
+          name: 'CUC external: FQDN HTTPS reachability'
+          type: SIMPLE
+          key: 'net.tcp.service[https,{$CUC.FQDN},8443]'
+          delay: 5m
+          history: 30d
+          description: 'Independent DNS plus HTTPS reachability check from the Zabbix server or proxy to the configured Unity Connection FQDN.'
+          tags:
+            - tag: component
+              value: api
+            - tag: scope
+              value: operator
+          triggers:
+            - uuid: 9476e659c36b4b3886087571eb2edcdd
+              expression: 'max(/Cisco Unity Connection 15 by API/net.tcp.service[https,{$CUC.FQDN},8443],15m)=0'
+              name: 'CUC external FQDN HTTPS endpoint is unreachable'
+              opdata: 'HTTPS reachability: {ITEM.LASTVALUE1}'
+              priority: HIGH
+              description: 'The Zabbix execution point could not resolve or reach the Unity HTTPS endpoint for three normal five-minute checks.'
+              tags:
+                - tag: component
+                  value: api
         - uuid: c1e570336e6c491083a28d8f0888475b
           name: 'CUC internal: Certificate Management identity snapshot raw/master'
           type: HTTP_AGENT
@@ -515,7 +930,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\MWI Requests Failed Total",p=value.indexOf(marker);if(p<0)throw "counter absent: MWI Requests Failed Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\MWI Requests Failed Total",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: MWI Requests Failed Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -542,7 +957,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\MWI Requests Total",p=value.indexOf(marker);if(p<0)throw "counter absent: MWI Requests Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\MWI Requests Total",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: MWI Requests Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -579,7 +994,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Message Notifications Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Message Notifications Failed";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Message Notifications Failed",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Message Notifications Failed";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -606,7 +1021,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Message Notifications Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Message Notifications Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Message Notifications Total",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Message Notifications Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -624,7 +1039,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Pager Notifications Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Pager Notifications Failed";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Pager Notifications Failed",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Pager Notifications Failed";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -651,7 +1066,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Pager Notifications Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Pager Notifications Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Pager Notifications Total",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Pager Notifications Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -968,7 +1383,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Ports Idle Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Ports Idle Current";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Ports Idle Current",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Ports Idle Current";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -987,7 +1402,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Ports In Use Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Ports In Use Current";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Ports In Use Current",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Ports In Use Current";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -1006,7 +1421,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Ports Locked",p=value.indexOf(marker);if(p<0)throw "counter absent: Ports Locked";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Ports Locked",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Ports Locked";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -1055,7 +1470,7 @@ zabbix_export:
             - type: JAVASCRIPT
               parameters:
                 - |
-                  function counter(name){var marker="\\{$CUC.NODE}\\CUC Phone System\\"+name,p=value.indexOf(marker);if(p<0)throw "counter absent: "+name;var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable: "+name;var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value: "+name;return n;}
+                  function counter(name){var marker="\\{$CUC.NODE}\\CUC Phone System\\"+name,p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: "+name;var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable: "+name;var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value: "+name;return n;}
                   var used=counter("Ports In Use Current"),idle=counter("Ports Idle Current"),total=used+idle;if(total<=0)return 0;return used*100/total;
           master_item:
             key: cuc.perfmon.phone_system.raw
@@ -1226,7 +1641,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Outgoing Calls Release Transfers Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Outgoing Calls Release Transfers Failed";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Outgoing Calls Release Transfers Failed",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Outgoing Calls Release Transfers Failed";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -1253,7 +1668,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Outgoing Calls Supervised Transfers Dropped",p=value.indexOf(marker);if(p<0)throw "counter absent: Outgoing Calls Supervised Transfers Dropped";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Outgoing Calls Supervised Transfers Dropped",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Outgoing Calls Supervised Transfers Dropped";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -1280,7 +1695,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Outgoing Calls Supervised Transfers Failed",p=value.indexOf(marker);if(p<0)throw "counter absent: Outgoing Calls Supervised Transfers Failed";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Phone System\\Outgoing Calls Supervised Transfers Failed",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Outgoing Calls Supervised Transfers Failed";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.phone_system.raw
           tags:
@@ -1444,7 +1859,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Sessions: Voice\\Failsafes Total",p=value.indexOf(marker);if(p<0)throw "counter absent: Failsafes Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Sessions: Voice\\Failsafes Total",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Failsafes Total";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.voice_sessions.raw
           tags:
@@ -1473,7 +1888,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Sessions: Voice\\Delay - Opening Greeting [ms]",p=value.indexOf(marker);if(p<0)throw "counter absent: Delay - Opening Greeting [ms]";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Sessions: Voice\\Delay - Opening Greeting [ms]",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Delay - Opening Greeting [ms]";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.voice_sessions.raw
           tags:
@@ -1492,7 +1907,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var marker="\\\\{$CUC.NODE}\\CUC Sessions: Voice\\Sessions Current",p=value.indexOf(marker);if(p<0)throw "counter absent: Sessions Current";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var marker="\\\\{$CUC.NODE}\\CUC Sessions: Voice\\Sessions Current",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent: Sessions Current";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cuc.perfmon.voice_sessions.raw
           tags:
@@ -1564,6 +1979,25 @@ zabbix_export:
                   tags:
                     - tag: component
                       value: certificate
+            - uuid: db13945e107c483a8912ec750aff79d8
+              name: 'CUC: certificate {#CERT.NAME}: issuer common name'
+              type: DEPENDENT
+              key: 'cuc.certificate.issuer.cn[{#CERT.NAME}]'
+              delay: '0'
+              value_type: TEXT
+              trends: '0'
+              description: 'Issuer common name extracted from the normalized Issuer DN.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var m=/(?:^|,\s*)CN=([^,]+)/.exec(value);if(!m||!m[1])throw ''issuer CN absent'';return m[1];'
+              master_item:
+                key: 'cuc.certificate.issuer[{#CERT.NAME}]'
+              tags:
+                - tag: component
+                  value: certificate
+                - tag: scope
+                  value: operator
             - uuid: 3d6962fe647b4ae68afbba424412a5e2
               name: 'CUC: certificate {#CERT.NAME}: issuer'
               type: DEPENDENT
@@ -1579,23 +2013,65 @@ zabbix_export:
               master_item:
                 key: cuc.certificate.snapshot.raw
               tags:
+                - tag: component
+                  value: certificate
                 - tag: scope
                   value: operator
             - uuid: 27f320e8fad942dab70cfe51fd85baa9
-              name: 'CUC: certificate {#CERT.NAME}: expiry raw date'
+              name: 'CUC: certificate {#CERT.NAME}: expiry date (UTC)'
               type: DEPENDENT
               key: 'cuc.certificate.rawdate[{#CERT.NAME}]'
               delay: '0'
               value_type: CHAR
               trends: '0'
-              description: 'Certificate expiry timestamp as returned by the Cisco VOS Certificate Management API.'
+              description: 'PEM-derived certificate expiry in ISO 8601 UTC format.'
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++){if(a[i].indexOf(''---'')!==0&&a[i].length)s+=new TextDecoder().decode(atob(a[i]));}var m=s.match(/(\d{12})[\s\S]*(\d{12})/);if(!m)throw ''expiry absent'';return m[2];'
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++){if(a[i].indexOf(''---'')!==0&&a[i].length)s+=new TextDecoder().decode(atob(a[i]));}var m=s.match(/(\d{12})[\s\S]*(\d{12})/);if(!m)throw ''expiry absent'';var z=m[2],y=2000+Number(z.slice(0,2)),mo=Number(z.slice(2,4)),da=Number(z.slice(4,6)),h=Number(z.slice(6,8)),mi=Number(z.slice(8,10)),se=Number(z.slice(10,12));if(mo<1||mo>12||da<1||da>31||h>23||mi>59||se>59)throw ''invalid expiry'';function p(n){return (''0''+n).slice(-2);}return [y,p(mo),p(da)].join(''-'')+''T''+[p(h),p(mi),p(se)].join('':'')+''Z'';'
               master_item:
                 key: cuc.certificate.snapshot.raw
               tags:
+                - tag: component
+                  value: certificate
+                - tag: scope
+                  value: operator
+            - uuid: 2ce458ea00474bfcb852be2db7d536d2
+              name: 'CUC: certificate {#CERT.NAME}: subject alternative names'
+              type: DEPENDENT
+              key: 'cuc.certificate.san[{#CERT.NAME}]'
+              delay: '0'
+              value_type: TEXT
+              trends: '0'
+              description: 'Subject Alternative Names parsed from the existing PEM. A valid certificate without the extension reports No SAN extension; malformed PEM or DER fails closed.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var pem=x.certificate;if(!/^-----BEGIN CERTIFICATE-----\s*[\s\S]*\s*-----END CERTIFICATE-----\s*$/.test(pem))throw ''invalid PEM framing'';var p=pem.replace(/-----[^-]+-----|\s/g,'''');if(!p)throw ''PEM absent'';var z=atob(p),b='''';for(var h=0;h<z.length;h++)b+=String.fromCharCode(z[h]);var n=b.length;function B(q){return b.charCodeAt(q);}function r(q){if(q+2>n)throw ''truncated DER'';var t=B(q++),l=B(q++),u;if(l&128){u=l&127;if(!u||u>4||q+u>n)throw ''invalid DER length'';l=0;while(u--)l=l*256+B(q++);}if(q+l>n)throw ''truncated DER'';return {t:t,v:q,e:q+l,n:q+l};}function txt(a){return b.slice(a.v,a.e);}function ip(a){var q=a.v,o=[];if(a.e-q===4){for(;q<a.e;q++)o.push(B(q));return o.join(''.'');}if(a.e-q!==16)throw ''invalid SAN IP'';for(var i=0;i<8;i++,q+=2)o.push((B(q)*256+B(q+1)).toString(16));return o.join('':'');}var top=r(0);if(top.t!==48||top.e!==n)throw ''invalid certificate DER'';var tbs=r(top.v);if(tbs.t!==48||tbs.e>top.e)throw ''invalid TBSCertificate'';var sigalg=r(tbs.n),sigval=r(sigalg.n);if(sigalg.t!==48||sigval.t!==3||sigval.n!==top.e||sigval.e-sigval.v<2)throw ''invalid certificate signature structure'';var algoid=r(sigalg.v);if(algoid.t!==6)throw ''invalid signature algorithm'';if(algoid.n<sigalg.e&&r(algoid.n).n!==sigalg.e)throw ''invalid signature parameters'';var unused=B(sigval.v);if(unused>7||(unused&&((B(sigval.e-1)&((1<<unused)-1))!==0)))throw ''invalid signature bit string'';var q=tbs.v,a=r(q);if(a.t===160){q=a.n;a=r(q);}q=a.n;for(var skip=0;skip<5;skip++){a=r(q);q=a.n;}var ext=null;while(q<tbs.e){a=r(q);q=a.n;if(a.t===163){if(ext)throw ''duplicate extensions'';ext=a;}}if(!ext)return ''No SAN extension'';var seq=r(ext.v);if(seq.t!==48||seq.e!==ext.e)throw ''invalid extensions'';var sanv=null;for(q=seq.v;q<seq.e;){var one=r(q);q=one.n;if(one.t!==48)throw ''invalid extension'';var e=r(one.v);if(e.t!==6)throw ''extension OID absent'';var san=e.e-e.v===3&&B(e.v)===85&&B(e.v+1)===29&&B(e.v+2)===17;var v=r(e.n);if(v.t===1)v=r(v.n);if(v.t!==4||v.n!==one.e)throw ''invalid extension value'';if(san){if(sanv)throw ''duplicate SAN extension'';sanv=v;}}if(!sanv)return ''No SAN extension'';var names=r(sanv.v);if(names.t!==48||names.e!==sanv.e)throw ''invalid SAN sequence'';var out=[];for(var j=names.v;j<names.e;){var g=r(j);j=g.n;if(g.t===130)out.push(''DNS:''+txt(g));else if(g.t===135)out.push(''IP:''+ip(g));else if(g.t===134)out.push(''URI:''+txt(g));else if(g.t===129)out.push(''RFC822:''+txt(g));}return out.length?out.join('', ''):''No SAN extension'';'
+              master_item:
+                key: cuc.certificate.snapshot.raw
+              tags:
+                - tag: component
+                  value: certificate
+                - tag: scope
+                  value: operator
+            - uuid: 9303e784f2814b75833a6a52c6fc5cec
+              name: 'CUC: certificate {#CERT.NAME}: subject common name'
+              type: DEPENDENT
+              key: 'cuc.certificate.subject.cn[{#CERT.NAME}]'
+              delay: '0'
+              value_type: TEXT
+              trends: '0'
+              description: 'Subject common name extracted from the normalized Subject DN.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var m=/(?:^|,\s*)CN=([^,]+)/.exec(value);if(!m||!m[1])throw ''subject CN absent'';return m[1];'
+              master_item:
+                key: 'cuc.certificate.subject[{#CERT.NAME}]'
+              tags:
+                - tag: component
+                  value: certificate
                 - tag: scope
                   value: operator
             - uuid: ac5f09d86caf4b39bd1bc110ae5d1ed2
@@ -1613,6 +2089,8 @@ zabbix_export:
               master_item:
                 key: cuc.certificate.snapshot.raw
               tags:
+                - tag: component
+                  value: certificate
                 - tag: scope
                   value: operator
           master_item:
@@ -1639,7 +2117,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var marker="Network Interface({#IF.NAME})\\Rx Bytes",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;'
+                    - 'var marker="Network Interface({#IF.NAME})\\Rx Bytes",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;'
                 - type: CHANGE_PER_SECOND
                   parameters:
                     - ''
@@ -1663,7 +2141,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var marker="Network Interface({#IF.NAME})\\Rx Dropped",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;'
+                    - 'var marker="Network Interface({#IF.NAME})\\Rx Dropped",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;'
                 - type: SIMPLE_CHANGE
                   parameters:
                     - ''
@@ -1685,7 +2163,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var marker="Network Interface({#IF.NAME})\\Tx Bytes",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;'
+                    - 'var marker="Network Interface({#IF.NAME})\\Tx Bytes",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;'
                 - type: CHANGE_PER_SECOND
                   parameters:
                     - ''
@@ -1709,7 +2187,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var marker="Network Interface({#IF.NAME})\\Tx Dropped",p=value.indexOf(marker);if(p<0)throw "counter absent";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;'
+                    - 'var marker="Network Interface({#IF.NAME})\\Tx Dropped",p=value.indexOf(marker);while(p>=0&&!/^\s*<\//.test(value.slice(p+marker.length)))p=value.indexOf(marker,p+marker.length);if(p<0)throw "counter absent";var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec((function(b){var q=/<[A-Za-z_][^>]*Name>/.exec(b);return q?b.slice(0,q.index):b;})(value.slice(p)));if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "invalid counter value";return n;'
                 - type: SIMPLE_CHANGE
                   parameters:
                     - ''
@@ -2024,6 +2502,9 @@ zabbix_export:
         - macro: '{$CUC.HTTP.PROXY}'
           value: ''
           description: 'Optional HTTP proxy URL for HTTP agent requests; leave empty for a direct connection.'
+        - macro: '{$CUC.FQDN}'
+          value: cuc.example.invalid
+          description: 'Unity Connection FQDN resolved by the Zabbix server or proxy for the independent HTTPS reachability check.'
         - macro: '{$CUC.INVENTORY.INTERVAL}'
           value: 15m
           description: 'Interval for low-change VMREST capacity and inventory data.'
@@ -2036,6 +2517,9 @@ zabbix_export:
         - macro: '{$CUC.MEM.WARN}'
           value: '85'
           description: 'Memory warning threshold in percent.'
+        - macro: '{$CUC.MESSAGE.QUEUE.WARN}'
+          value: '10'
+          description: 'Queued-message warning threshold sustained for ten minutes.'
         - macro: '{$CUC.NODE}'
           value: cuc-node
           description: 'Exact Unity node hostname used in PerfMon counter paths.'
@@ -2063,6 +2547,12 @@ zabbix_export:
         - macro: '{$CUC.PORTS.WARN}'
           value: '80'
           description: 'Voice-port utilization warning threshold in percent.'
+        - macro: '{$CUC.REPLICATION.EXPECTED}'
+          value: '0'
+          description: 'Set to 1 only on a Unity Connection cluster node where file replication is configured and expected.'
+        - macro: '{$CUC.REPLICATION.LATENCY.WARN}'
+          value: '300'
+          description: 'File-replication latency warning threshold in seconds, evaluated over 15 minutes when replication is expected.'
         - macro: '{$CUC.SERVICEABILITY.URL}'
           value: 'https://cuc.example.invalid:8443'
           description: 'Serviceability SOAP base URL, normally HTTPS on port 8443.'
@@ -2082,7 +2572,7 @@ zabbix_export:
           value: '1'
           description: 'Set to 1 when this Unity Connection node must have a phone system, port group, and voice ports.'
         - macro: '{$CUC.TEMPLATE.VERSION}'
-          value: 1.3.1
+          value: 1.4.0
           description: 'Semantic release version of this Unity Connection template export.'
         - macro: '{$CUC.URL}'
           value: 'https://cuc.example.invalid'
@@ -2093,8 +2583,110 @@ zabbix_export:
           pages:
             - name: Overview
               widgets:
+                - type: item
+                  name: 'VMREST health'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.api.available
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'Voice-port utilization'
+                  x: '12'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.ports.util
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'Message queue'
+                  x: '24'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.message.queue.current
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'VMREST throttling'
+                  x: '36'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.vmrest.throttled.last_hour
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'Replication latency'
+                  x: '48'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.replication.latency
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
+                - type: item
+                  name: 'Voice sessions'
+                  x: '60'
+                  width: '12'
+                  height: '5'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.voice.sessions.current
+                    - type: INTEGER
+                      name: show
+                      value: '2'
+                    - type: INTEGER
+                      name: show
+                      value: '4'
                 - type: svggraph
                   name: 'Unity Connection utilization, in %'
+                  'y': '5'
                   width: '72'
                   height: '10'
                   fields:
@@ -2143,6 +2735,83 @@ zabbix_export:
                     - type: INTEGER
                       name: show_problems
                       value: '1'
+                - type: svggraph
+                  name: 'Calls, sessions, and message throughput'
+                  'y': '15'
+                  width: '72'
+                  height: '10'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color.0
+                      value: 1f78b4
+                    - type: STRING
+                      name: ds.0.color.1
+                      value: ff7f00
+                    - type: STRING
+                      name: ds.0.color.2
+                      value: 33a02c
+                    - type: STRING
+                      name: ds.0.color.3
+                      value: d62728
+                    - type: INTEGER
+                      name: ds.0.dataset_type
+                      value: '0'
+                    - type: ITEM
+                      name: ds.0.itemids.0
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.calls.current
+                    - type: ITEM
+                      name: ds.0.itemids.1
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.voice.sessions.current
+                    - type: ITEM
+                      name: ds.0.itemids.2
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.message.received.rate
+                    - type: ITEM
+                      name: ds.0.itemids.3
+                      value:
+                        host: 'Cisco Unity Connection 15 by API'
+                        key: cuc.message.delivered.rate
+                    - type: INTEGER
+                      name: legend_lines
+                      value: '4'
+                    - type: INTEGER
+                      name: legend_statistic
+                      value: '1'
+                    - type: STRING
+                      name: reference
+                      value: CUCMS
+                    - type: INTEGER
+                      name: show_problems
+                      value: '1'
+                - type: problems
+                  name: 'Unity Connection problems'
+                  'y': '25'
+                  width: '72'
+                  height: '8'
+                  fields:
+                    - type: STRING
+                      name: reference
+                      value: CUCPR
+                    - type: INTEGER
+                      name: severities.0
+                      value: '1'
+                    - type: INTEGER
+                      name: severities.1
+                      value: '2'
+                    - type: INTEGER
+                      name: severities.2
+                      value: '3'
+                    - type: INTEGER
+                      name: severities.3
+                      value: '4'
+                    - type: INTEGER
+                      name: severities.4
+                      value: '5'
       valuemaps:
         - uuid: 82cb0fba39774438a0572e61101d62be
           name: 'CUC collection health'

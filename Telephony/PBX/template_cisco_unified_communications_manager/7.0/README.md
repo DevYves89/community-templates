@@ -5,7 +5,7 @@
 Monitors Cisco Unified Communications Manager 15 through read-only AXL,
 RISPort70, PerfMon, ControlCenter SOAP, and Cisco VOS Certificate Management
 APIs. The template is exported for Zabbix 7.0 and has template release version
-`1.3.1` in `{$CUCM.TEMPLATE.VERSION}`.
+`1.4.0` in `{$CUCM.TEMPLATE.VERSION}`.
 
 Maintainer: DevYves89
 
@@ -37,6 +37,8 @@ documented in the template itself. Keep `{$CUCM.DB.REPLICATION.EXPECTED}` at
 `0` on standalone Publishers; set it to `1` only when replication is known to
 be expected. Service outage triggers are opt-in through the contextual
 `{$CUCM.SERVICE.EXPECTED:"<service name>"}` macro.
+SIP-trunk outage triggers use the same opt-in contract through
+`{$CUCM.SIP.TRUNK.EXPECTED:"<trunk name>"}`.
 
 Cisco documents the required access in the [AXL authentication
 guide](https://developer.cisco.com/docs/axl/authentication/), [PerfMon getting
@@ -51,11 +53,13 @@ guide](https://developer.cisco.com/docs/certificate-management/authentication/).
   Management.
 - CPU, memory, swap, uptime, process/thread counts, disk IOPS, partition and
   network-interface performance.
-- CallManager media capacity and call-processing queue/rejection metrics.
+- CallManager media capacity, Average Expected Delay, Code Yellow/Red, and
+  call-processing queue/rejection metrics.
 - ControlCenter service state, reason, uptime and expected-service alarms.
 - Certificate discovery with expiry, Subject, Issuer, and SAN metadata.
-- SIP-trunk PerfMon call statistics; runtime registration is deliberately not
-  inferred when RIS has no runtime record.
+- SIP-trunk PerfMon call statistics plus bounded RISPort70 registration and
+  registering-node discovery. A valid absent runtime record remains absent and
+  is never fabricated as Down.
 - A full-HD operations dashboard for DB replication, memory, registered
   phones, SIP trunks, call activity, and AXL throttling/utilization.
 

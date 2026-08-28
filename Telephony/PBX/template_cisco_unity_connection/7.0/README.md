@@ -5,7 +5,7 @@
 Monitors Cisco Unity Connection 15 through read-only VMREST/CUPI, Cisco
 Serviceability PerfMon, ControlCenter SOAP, and Cisco VOS Certificate
 Management APIs. The template is exported for Zabbix 7.0 and has template
-release version `1.3.1` in `{$CUC.TEMPLATE.VERSION}`.
+release version `1.4.0` in `{$CUC.TEMPLATE.VERSION}`.
 
 Maintainer: DevYves89
 
@@ -27,6 +27,7 @@ Link the template to one Unity Connection node and set these host macros:
 | Macro | Required | Purpose |
 |---|---:|---|
 | `{$CUC.URL}` | yes | Unity base URL, without a trailing slash. |
+| `{$CUC.FQDN}` | yes | Node FQDN for the independent HTTPS reachability check. |
 | `{$CUC.SERVICEABILITY.URL}` | yes | Cisco Serviceability SOAP base URL, normally port 8443. |
 | `{$CUC.CERT.URL}` | certificate only | Cisco VOS Certificate Management base URL. |
 | `{$CUC.API.USER}` / `{$CUC.API.PASSWORD}` | yes | Read-only Unity account and secret password. |
@@ -49,14 +50,21 @@ authentication guide](https://developer.cisco.com/docs/certificate-management/au
 - CPU, memory, swap, system, partition, and network-interface PerfMon data.
 - Voice-port utilization, calls, MWI failures, voice sessions, failsafes, and
   opening-greeting delay.
+- Message Store queue, delivery rate, retry/failure deltas, VMREST throttling
+  telemetry when exposed by the node, and file-replication latency/rate.
 - ControlCenter service discovery and state.
-- Identity-certificate discovery with expiry, Subject, Issuer, and SAN
-  metadata.
-- A full-HD overview dashboard for CPU, memory, and swap utilization.
+- Identity-certificate discovery with UTC expiry, Subject/Issuer CN, full DN,
+  and SAN metadata from the existing PEM snapshot.
+- Independent HTTPS reachability and an operator dashboard covering collection
+  health, telephony, messaging, replication, certificates, and problems.
 
 Raw transport/master items are tagged `scope=internal`; operator-facing items
 are tagged `scope=operator`. The template collects only read-only endpoints
 and does not start, stop, restart, or otherwise modify Unity services.
+Replication alerts remain opt-in through `{$CUC.REPLICATION.EXPECTED}`. The
+three VMREST Container dependents are disabled by default and should be enabled
+only when the raw master proves that the installed CUC release exposes those
+counters.
 
 ## Security and limitations
 
