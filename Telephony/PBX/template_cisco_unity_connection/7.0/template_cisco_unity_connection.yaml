@@ -2584,7 +2584,7 @@ zabbix_export:
             - name: Overview
               widgets:
                 - type: item
-                  name: 'VMREST health'
+                  name: 'Collection health'
                   width: '12'
                   height: '5'
                   fields:
