@@ -8,6 +8,9 @@ zabbix_export:
       template: 'Cisco Unified Communications Manager 15 by API'
       name: 'Cisco Unified Communications Manager 15 by API'
       description: 'CUCM 15 monitoring through read-only AXL, RISPort70, PerfMon, ControlCenter, and Certificate Management APIs. Before linking, create one dedicated CUCM application user and assign it to Standard CCM Server Monitoring plus a custom AXL read-only access control group containing Standard AXL API Users and Standard AXL Read Only API Access; store it in {$CUCM.API.USER} and {$CUCM.API.PASSWORD}. For certificate discovery, create a separate Cisco VOS account with certificate-API privilege 0 (read only) and store it in {$CUCM.OS.USER} and {$CUCM.OS.PASSWORD}. Set {$CUCM.URL}, {$CUCM.CERT.URL}, {$CUCM.NODE}, and {$CUCM.FQDN} on the host. AXL is authoritative configuration inventory; RIS is runtime-only.'
+      vendor:
+        name: Zabbix
+        version: 7.0-0
       groups:
         - name: Templates/Telephony
       items:
@@ -2233,9 +2236,6 @@ zabbix_export:
         - macro: '{$CUCM.SWAP.WARN}'
           value: '25'
           description: 'Swap utilization warning threshold in percent.'
-        - macro: '{$CUCM.TEMPLATE.VERSION}'
-          value: 1.4.0
-          description: 'Semantic release version of this CUCM template export.'
         - macro: '{$CUCM.URL}'
           value: 'https://cucm.example:8443'
           description: 'CUCM API base URL. Override on the host.'

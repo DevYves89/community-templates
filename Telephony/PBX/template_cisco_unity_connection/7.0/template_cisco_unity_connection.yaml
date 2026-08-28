@@ -8,6 +8,9 @@ zabbix_export:
       template: 'Cisco Unity Connection 15 by API'
       name: 'Cisco Unity Connection 15 by API'
       description: 'Cisco Unity Connection 15 monitoring through read-only VMREST/CUPI, Cisco Serviceability PerfMon and ControlCenter SOAP, and the Cisco VOS Certificate Management API. Before linking, create a dedicated Unity user without a mailbox and assign Read Only Administrator for GET-only VMREST/CUPI and Serviceability monitoring; use System Administrator only as a compatibility fallback if the installed release rejects a required read endpoint. Store it in {$CUC.API.USER} and {$CUC.API.PASSWORD}. For certificate discovery, create a separate Cisco VOS account with certificate-API privilege 0 (read only) and store it in {$CUC.OS.USER} and {$CUC.OS.PASSWORD}. Set {$CUC.URL}, {$CUC.SERVICEABILITY.URL}, {$CUC.CERT.URL}, {$CUC.NODE}, and {$CUC.FQDN} on the host. Enable replication alerting only on a clustered node by setting {$CUC.REPLICATION.EXPECTED}=1. Operator items use scope=operator; transport/master payloads use scope=internal.'
+      vendor:
+        name: Zabbix
+        version: 7.0-0
       groups:
         - name: Templates/Telephony
       items:
@@ -2571,9 +2574,6 @@ zabbix_export:
         - macro: '{$CUC.TELEPHONY.REQUIRED}'
           value: '1'
           description: 'Set to 1 when this Unity Connection node must have a phone system, port group, and voice ports.'
-        - macro: '{$CUC.TEMPLATE.VERSION}'
-          value: 1.4.0
-          description: 'Semantic release version of this Unity Connection template export.'
         - macro: '{$CUC.URL}'
           value: 'https://cuc.example.invalid'
           description: 'Unity base URL without trailing slash. Override on the host.'

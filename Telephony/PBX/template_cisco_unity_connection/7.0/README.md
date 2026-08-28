@@ -4,8 +4,8 @@
 
 Monitors Cisco Unity Connection 15 through read-only VMREST/CUPI, Cisco
 Serviceability PerfMon, ControlCenter SOAP, and Cisco VOS Certificate
-Management APIs. The template is exported for Zabbix 7.0 and has template
-release version `1.4.0` in `{$CUC.TEMPLATE.VERSION}`.
+Management APIs. The template is exported for Zabbix 7.0 and stores its
+template release as `vendor.name: Zabbix` and `vendor.version: 7.0-0`.
 
 Maintainer: DevYves89
 
