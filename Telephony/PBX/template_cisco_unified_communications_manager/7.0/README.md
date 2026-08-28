@@ -26,6 +26,7 @@ Link the template to one CUCM node and set these host macros before collection:
 | Macro | Required | Purpose |
 |---|---:|---|
 | `{$CUCM.URL}` | yes | CUCM API base URL, including port 8443. |
+| `{$CUCM.AXL.URL}` | yes | CUCM Publisher AXL base URL. Use the Publisher value on every node host, including Subscribers. |
 | `{$CUCM.FQDN}` | yes | Node FQDN for the independent HTTPS reachability check. |
 | `{$CUCM.API.USER}` / `{$CUCM.API.PASSWORD}` | yes | Shared read-only AXL, PerfMon, RISPort70, and ControlCenter account and secret password. |
 | `{$CUCM.NODE}` | yes | Exact CUCM node name used in PerfMon counter paths. |
@@ -53,6 +54,8 @@ guide](https://developer.cisco.com/docs/certificate-management/authentication/).
   Management.
 - CPU, memory, swap, uptime, process/thread counts, disk IOPS, partition and
   network-interface performance.
+- Active and Inactive VOS image-partition utilization as informational values;
+  their expected image occupancy is excluded from generic capacity alerts.
 - CallManager media capacity, Average Expected Delay, Code Yellow/Red, and
   call-processing queue/rejection metrics.
 - ControlCenter service state, reason, uptime and expected-service alarms.
@@ -66,6 +69,10 @@ guide](https://developer.cisco.com/docs/certificate-management/authentication/).
 Raw transport/master items are tagged `scope=internal`; operator-facing items
 are tagged `scope=operator`. Configure the discovery exclusion macros for the
 local topology before enabling alerts for optional resources.
+
+AXL is configuration inventory rather than a per-node runtime API, so
+`{$CUCM.AXL.URL}` must name the Publisher for all hosts in a cluster. PerfMon,
+RISPort70, and ControlCenter continue to use the node-local `{$CUCM.URL}`.
 
 ## Security and limitations
 

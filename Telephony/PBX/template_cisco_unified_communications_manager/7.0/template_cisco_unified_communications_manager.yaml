@@ -7,7 +7,7 @@ zabbix_export:
     - uuid: 7e856e145c6c47b99b58445f00100002
       template: 'Cisco Unified Communications Manager 15 by API'
       name: 'Cisco Unified Communications Manager 15 by API'
-      description: 'CUCM 15 monitoring through read-only AXL, RISPort70, PerfMon, ControlCenter, and Certificate Management APIs. Before linking, create one dedicated CUCM application user and assign it to Standard CCM Server Monitoring plus a custom AXL read-only access control group containing Standard AXL API Users and Standard AXL Read Only API Access; store it in {$CUCM.API.USER} and {$CUCM.API.PASSWORD}. For certificate discovery, create a separate Cisco VOS account with certificate-API privilege 0 (read only) and store it in {$CUCM.OS.USER} and {$CUCM.OS.PASSWORD}. Set {$CUCM.URL}, {$CUCM.CERT.URL}, {$CUCM.NODE}, and {$CUCM.FQDN} on the host. AXL is authoritative configuration inventory; RIS is runtime-only. Maintainer: DevYves89.'
+      description: 'CUCM 15 monitoring through read-only AXL, RISPort70, PerfMon, ControlCenter, and Certificate Management APIs. Before linking, create one dedicated CUCM application user and assign it to Standard CCM Server Monitoring plus a custom AXL read-only access control group containing Standard AXL API Users and Standard AXL Read Only API Access; store it in {$CUCM.API.USER} and {$CUCM.API.PASSWORD}. For certificate discovery, create a separate Cisco VOS account with certificate-API privilege 0 (read only) and store it in {$CUCM.OS.USER} and {$CUCM.OS.PASSWORD}. Set {$CUCM.URL}, {$CUCM.AXL.URL}, {$CUCM.CERT.URL}, {$CUCM.NODE}, and {$CUCM.FQDN} on the host. {$CUCM.AXL.URL} is the Publisher configuration endpoint for every node host; RIS is runtime-only. Active and Inactive VOS partitions remain visible but are excluded from generic capacity alarms because their image occupancy is expected. Maintainer: DevYves89.'
       vendor:
         name: Zabbix
         version: 7.0-0
@@ -207,7 +207,7 @@ zabbix_export:
           password: '{$CUCM.API.PASSWORD}'
           description: 'Internal transport/master item. Raw API payload for dependent operator items: CUCM: software version and AXL API health. Filter scope=internal; do not use this raw value for incident interpretation.'
           timeout: 15s
-          url: '{$CUCM.URL}/axl/'
+          url: '{$CUCM.AXL.URL}/axl/'
           posts: '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:axl="http://www.cisco.com/AXL/API/{$CUCM.API.VERSION}"><soapenv:Body><axl:getCCMVersion/></soapenv:Body></soapenv:Envelope>'
           http_proxy: '{$CUCM.HTTP.PROXY}'
           headers:
@@ -944,10 +944,32 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf(''Partition(Active)''); if(p<0) throw ''counter not found''; var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p)); if(!r) throw ''value not found''; return Number(r[1])*1;'
+                - 'var r=/<[^>]*Name>[^<]*Partition\(Active\)\\% Used<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid Active partition utilization counter'';var v=Number(r[1]);if(!isFinite(v)||v<0||v>100)throw ''invalid Active partition utilization'';return v;'
           master_item:
             key: cucm.perfmon.partition.raw
+          description: 'Informational VOS Active image-partition utilization. Its baseline image occupancy is normal and it intentionally has no capacity trigger.'
           tags:
+            - tag: component
+              value: storage
+            - tag: scope
+              value: operator
+        - uuid: 708617f551ba4dcebf8d3a3c88599b6d
+          name: 'CUCM: partition Inactive utilization'
+          type: DEPENDENT
+          key: cucm.partition.inactive.used
+          delay: '0'
+          value_type: FLOAT
+          units: '%'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'var r=/<[^>]*Name>[^<]*Partition\(Inactive\)\\% Used<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid Inactive partition utilization counter'';var v=Number(r[1]);if(!isFinite(v)||v<0||v>100)throw ''invalid Inactive partition utilization'';return v;'
+          master_item:
+            key: cucm.perfmon.partition.raw
+          description: 'Informational VOS Inactive image-partition utilization. A newly installed inactive image can occupy most of this partition and it intentionally has no capacity trigger.'
+          tags:
+            - tag: component
+              value: storage
             - tag: scope
               value: operator
         - uuid: 11b7d6fd1cd14cd1a0423ee801000025
@@ -2204,8 +2226,8 @@ zabbix_export:
           value: '1'
           description: 'Maximum average partition I/O queue length.'
         - macro: '{$CUCM.PARTITIONS.NOT_TO_DISCOVER}'
-          value: ^Swap$
-          description: 'Regex for partition instances excluded from discovery.'
+          value: '^(?:Active|Inactive|Swap)$'
+          description: 'Regex for partitions excluded from generic discovery and capacity alarms. Active/Inactive are VOS image partitions: retain their dedicated informational items, not percentage capacity alerts.'
         - macro: '{$CUCM.SERVICE.EXPECTED:"{#SERVICE.NAME}"}'
           value: '0'
           description: 'Set an exact discovered service context to 1 only when it is expected to run.'
@@ -2239,6 +2261,9 @@ zabbix_export:
         - macro: '{$CUCM.URL}'
           value: 'https://cucm.example:8443'
           description: 'CUCM API base URL. Override on the host.'
+        - macro: '{$CUCM.AXL.URL}'
+          value: 'https://cucm.example:8443'
+          description: 'CUCM Publisher AXL API base URL. Set this to the Publisher on every cluster-node host; AXL is configuration inventory, not a per-node runtime API.'
       dashboards:
         - uuid: 71df05ce849f45ce9c2f47bf8b1542e2
           name: 'CUCM operations overview'
