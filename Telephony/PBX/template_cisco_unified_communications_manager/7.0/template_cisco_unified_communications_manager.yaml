@@ -10,7 +10,7 @@ zabbix_export:
       description: 'CUCM 15 monitoring through read-only AXL, RISPort70, PerfMon, ControlCenter, and Certificate Management APIs. Before linking, create one dedicated CUCM application user and assign it to Standard CCM Server Monitoring plus a custom AXL read-only access control group containing Standard AXL API Users and Standard AXL Read Only API Access; store it in {$CUCM.API.USER} and {$CUCM.API.PASSWORD}. For certificate discovery, create a separate Cisco VOS account with certificate-API privilege 0 (read only) and store it in {$CUCM.OS.USER} and {$CUCM.OS.PASSWORD}. Set {$CUCM.URL}, {$CUCM.AXL.URL}, {$CUCM.CERT.URL}, {$CUCM.NODE}, and {$CUCM.FQDN} on the host. {$CUCM.AXL.URL} is the Publisher configuration endpoint for every node host; RIS is runtime-only. Active and Inactive VOS partitions remain visible but are excluded from generic capacity alarms because their image occupancy is expected. Maintainer: DevYves89.'
       vendor:
         name: Zabbix
-        version: 7.0-0
+        version: 7.0-1
       groups:
         - name: Templates/Telephony
       items:
@@ -198,7 +198,7 @@ zabbix_export:
           name: 'CUCM internal: AXL getCCMVersion raw/master'
           type: HTTP_AGENT
           key: cucm.axl.version.raw
-          delay: 15m
+          delay: '{$CUCM.AXL.VERSION.INTERVAL}'
           history: '0'
           value_type: TEXT
           trends: '0'
@@ -1265,7 +1265,7 @@ zabbix_export:
           name: 'CUCM internal: RISPort70 SIP-trunk runtime raw/master'
           type: SCRIPT
           key: cucm.ris.sip.raw
-          delay: 5m
+          delay: '{$CUCM.SIP.RUNTIME.INTERVAL}'
           history: '0'
           value_type: TEXT
           trends: '0'
@@ -2145,6 +2145,9 @@ zabbix_export:
         - tag: target
           value: cisco-unified-communications-manager
       macros:
+        - macro: '{$CUCM.AXL.VERSION.INTERVAL}'
+          value: 30m
+          description: 'Low-change Publisher AXL version and health polling interval. AXL is a configuration API, not a real-time interface.'
         - macro: '{$CUCM.API.PASSWORD}'
           type: SECRET_TEXT
           description: 'Secret password for the dedicated CUCM application user in {$CUCM.API.USER}. Override on the host.'
@@ -2243,6 +2246,9 @@ zabbix_export:
         - macro: '{$CUCM.SIP.TRUNK.EXPECTED:"{#SIP.TRUNK}"}'
           value: '0'
           description: 'Set an exact discovered SIP-trunk context to 1 only when that genuine RIS runtime record is expected to remain Registered.'
+        - macro: '{$CUCM.SIP.RUNTIME.INTERVAL}'
+          value: 10m
+          description: 'Polling interval for the bounded AXL SIP-trunk inventory and RISPort70 runtime-status collection.'
         - macro: '{$CUCM.SIP.TRUNKS.NOT_TO_DISCOVER}'
           value: ^$
           description: 'Regex for SIP trunks excluded from runtime discovery.'

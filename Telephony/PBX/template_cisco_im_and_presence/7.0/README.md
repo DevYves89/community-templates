@@ -5,7 +5,7 @@
 Monitors Cisco Unified Presence (CUP), now named Cisco IM and Presence Service
 (IM&P), through read-only Cisco Serviceability PerfMon and ControlCenter SOAP.
 The self-contained template is exported for Zabbix 7.0 and stores its release
-as `vendor.name: Zabbix` and `vendor.version: 7.0-0`.
+as `vendor.name: Zabbix` and `vendor.version: 7.0-1`.
 
 Maintainer: DevYves89
 

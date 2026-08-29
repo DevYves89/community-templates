@@ -10,7 +10,7 @@ zabbix_export:
       description: 'Cisco Unity Connection 15 monitoring through read-only VMREST/CUPI, Cisco Serviceability PerfMon and ControlCenter SOAP, and the Cisco VOS Certificate Management API. Before linking, create a dedicated Unity user without a mailbox and assign Read Only Administrator for GET-only VMREST/CUPI and Serviceability monitoring; use System Administrator only as a compatibility fallback if the installed release rejects a required read endpoint. Store it in {$CUC.API.USER} and {$CUC.API.PASSWORD}. For certificate discovery, create a separate Cisco VOS account with certificate-API privilege 0 (read only) and store it in {$CUC.OS.USER} and {$CUC.OS.PASSWORD}. Set {$CUC.URL}, {$CUC.SERVICEABILITY.URL}, {$CUC.CERT.URL}, {$CUC.NODE}, and {$CUC.FQDN} on the host. Enable replication alerting only on a clustered node by setting {$CUC.REPLICATION.EXPECTED}=1. Operator items use scope=operator; transport/master payloads use scope=internal. Maintainer: DevYves89.'
       vendor:
         name: Zabbix
-        version: 7.0-0
+        version: 7.0-1
       groups:
         - name: Templates/Telephony
       items:
@@ -763,6 +763,7 @@ zabbix_export:
           name: 'CUC internal: ControlCenter critical services raw/master'
           type: HTTP_AGENT
           key: cuc.control.services.raw
+          delay: '{$CUC.API.INTERVAL}'
           history: '0'
           value_type: TEXT
           trends: '0'
@@ -2467,7 +2468,7 @@ zabbix_export:
           value: cisco-unity-connection
       macros:
         - macro: '{$CUC.API.INTERVAL}'
-          value: 1m
+          value: 2m
           description: 'Polling interval for API health and runtime data.'
         - macro: '{$CUC.API.PASSWORD}'
           type: SECRET_TEXT
@@ -2509,7 +2510,7 @@ zabbix_export:
           value: cuc.example.invalid
           description: 'Unity Connection FQDN resolved by the Zabbix server or proxy for the independent HTTPS reachability check.'
         - macro: '{$CUC.INVENTORY.INTERVAL}'
-          value: 15m
+          value: 30m
           description: 'Interval for low-change VMREST capacity and inventory data.'
         - macro: '{$CUC.INVENTORY.TIMEOUT}'
           value: 45s

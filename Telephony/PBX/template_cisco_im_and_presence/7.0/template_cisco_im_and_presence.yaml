@@ -10,7 +10,7 @@ zabbix_export:
       description: 'Cisco IM and Presence 15 (CUP) baseline monitoring through read-only Cisco Serviceability PerfMon and ControlCenter SOAP. It covers API health, CPU, memory, swap, SIP Proxy sessions, Presence Engine sessions/subscriptions, and the critical-service raw snapshot. Operator values use scope=operator; XML/master payloads use scope=internal. Maintainer: DevYves89.'
       vendor:
         name: Zabbix
-        version: 7.0-0
+        version: 7.0-1
       groups:
         - name: Templates/Telephony
       items:
@@ -407,29 +407,6 @@ zabbix_export:
               value: raw
             - tag: scope
               value: internal
-        - uuid: 77c9e59f51b94db79cc3c780cff96015
-          name: 'CUP internal: PerfMon SIP Proxy raw/master'
-          type: HTTP_AGENT
-          key: cup.perfmon.sipproxy.raw
-          value_type: TEXT
-          trends: '0'
-          authtype: BASIC
-          username: '{$CUP.API.USER}'
-          password: '{$CUP.API.PASSWORD}'
-          timeout: '{$CUP.API.TIMEOUT}'
-          url: '{$CUP.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService'
-          posts: '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:n="http://schemas.cisco.com/ast/soap"><s:Body><n:perfmonCollectCounterData><n:Host>{$CUP.NODE}</n:Host><n:Object>Cisco SIP Proxy</n:Object></n:perfmonCollectCounterData></s:Body></s:Envelope>'
-          headers:
-            - name: Content-Type
-              value: 'text/xml; charset=utf-8'
-            - name: SOAPAction
-              value: '""'
-          request_method: POST
-          tags:
-            - tag: component
-              value: raw
-            - tag: scope
-              value: internal
         - uuid: e5c02570acbe4ea0a24d1235916b7679
           name: 'CUP internal: PerfMon SIP Proxy raw/master'
           type: HTTP_AGENT
@@ -628,7 +605,7 @@ zabbix_export:
               parameters:
                 - 'var p=value.indexOf("IMCTRLActiveSessions"),r;if(p<0)throw "counter absent";r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);'
           master_item:
-            key: cup.perfmon.sipproxy.raw
+            key: cup.perfmon.sip_proxy.raw
           tags:
             - tag: component
               value: sip
