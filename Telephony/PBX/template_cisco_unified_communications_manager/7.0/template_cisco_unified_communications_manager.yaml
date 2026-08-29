@@ -10,7 +10,7 @@ zabbix_export:
       description: 'CUCM 15 monitoring through read-only AXL, RISPort70, PerfMon, ControlCenter, and Certificate Management APIs. Before linking, create one dedicated CUCM application user and assign it to Standard CCM Server Monitoring plus a custom AXL read-only access control group containing Standard AXL API Users and Standard AXL Read Only API Access; store it in {$CUCM.API.USER} and {$CUCM.API.PASSWORD}. For certificate discovery, create a separate Cisco VOS account with certificate-API privilege 0 (read only) and store it in {$CUCM.OS.USER} and {$CUCM.OS.PASSWORD}. Set {$CUCM.URL}, {$CUCM.AXL.URL}, {$CUCM.CERT.URL}, {$CUCM.NODE}, and {$CUCM.FQDN} on the host. {$CUCM.AXL.URL} is the Publisher configuration endpoint for every node host; RIS is runtime-only. Active and Inactive VOS partitions remain visible but are excluded from generic capacity alarms because their image occupancy is expected. Maintainer: DevYves89.'
       vendor:
         name: Zabbix
-        version: 7.0-1
+        version: 7.0-2
       groups:
         - name: Templates/Telephony
       items:

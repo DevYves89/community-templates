@@ -5,7 +5,7 @@
 Monitors Cisco Unified Communications Manager 15 through read-only AXL,
 RISPort70, PerfMon, ControlCenter SOAP, and Cisco VOS Certificate Management
 APIs. The template is exported for Zabbix 7.0 and stores its template release
-as `vendor.name: Zabbix` and `vendor.version: 7.0-1`.
+as `vendor.name: Zabbix` and `vendor.version: 7.0-2`.
 
 Maintainer: DevYves89
 
