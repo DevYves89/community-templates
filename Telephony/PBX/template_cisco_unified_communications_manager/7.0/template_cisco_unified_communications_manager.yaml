@@ -30,9 +30,9 @@ zabbix_export:
               value: operator
           triggers:
             - uuid: 75db172ae56d437da88df68d76dce3e1
-              expression: 'nodata(/Cisco Unified Communications Manager 15 by API/cucm.api.axl.health,45m)=1'
-              name: 'CUCM AXL API health has no successful data for 45 minutes'
-              opdata: 'No successful AXL response for 45m'
+              expression: 'nodata(/Cisco Unified Communications Manager 15 by API/cucm.api.axl.health,90m)=1'
+              name: 'CUCM AXL API health has no successful data for 90 minutes'
+              opdata: 'No successful AXL response for 90m'
               priority: HIGH
               tags:
                 - tag: scope
@@ -199,7 +199,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: cucm.axl.version.raw
           delay: '{$CUCM.AXL.VERSION.INTERVAL}'
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           authtype: BASIC
@@ -229,7 +229,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf(''CallsActive'');if(p<0)throw ''counter absent'';var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw ''value absent'';return Number(r[1]);'
+                - 'var r=/<[^>]*Name>[^<]*\\CallsActive<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid CallsActive counter'';var v=Number(r[1]);if(!isFinite(v)||v<0||Math.floor(v)!==v)throw ''invalid CallsActive value'';return v;'
           master_item:
             key: cucm.perfmon.callmanager.raw
           tags:
@@ -243,7 +243,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf(''CallsAttempted'');if(p<0)throw ''counter absent'';var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw ''value absent'';return Number(r[1]);'
+                - 'var r=/<[^>]*Name>[^<]*\\CallsAttempted<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid CallsAttempted counter'';var v=Number(r[1]);if(!isFinite(v)||v<0||Math.floor(v)!==v)throw ''invalid CallsAttempted value'';return v;'
           master_item:
             key: cucm.perfmon.callmanager.raw
           tags:
@@ -257,7 +257,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf(''CallsCompleted'');if(p<0)throw ''counter absent'';var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw ''value absent'';return Number(r[1]);'
+                - 'var r=/<[^>]*Name>[^<]*\\CallsCompleted<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid CallsCompleted counter'';var v=Number(r[1]);if(!isFinite(v)||v<0||Math.floor(v)!==v)throw ''invalid CallsCompleted value'';return v;'
           master_item:
             key: cucm.perfmon.callmanager.raw
           tags:
@@ -271,7 +271,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf(''CallsInProgress'');if(p<0)throw ''counter absent'';var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw ''value absent'';return Number(r[1]);'
+                - 'var r=/<[^>]*Name>[^<]*\\CallsInProgress<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid CallsInProgress counter'';var v=Number(r[1]);if(!isFinite(v)||v<0||Math.floor(v)!==v)throw ''invalid CallsInProgress value'';return v;'
           master_item:
             key: cucm.perfmon.callmanager.raw
           tags:
@@ -285,7 +285,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf(''RegisteredHardwarePhones'');if(p<0)throw ''counter absent'';var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw ''value absent'';return Number(r[1]);'
+                - 'var r=/<[^>]*Name>[^<]*\\RegisteredHardwarePhones<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid RegisteredHardwarePhones counter'';var v=Number(r[1]);if(!isFinite(v)||v<0||Math.floor(v)!==v)throw ''invalid RegisteredHardwarePhones value'';return v;'
           master_item:
             key: cucm.perfmon.callmanager.raw
           tags:
@@ -299,7 +299,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf(''RegisteredMGCPGateway'');if(p<0)throw ''counter absent'';var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw ''value absent'';return Number(r[1]);'
+                - 'var r=/<[^>]*Name>[^<]*\\RegisteredMGCPGateway<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid RegisteredMGCPGateway counter'';var v=Number(r[1]);if(!isFinite(v)||v<0||Math.floor(v)!==v)throw ''invalid RegisteredMGCPGateway value'';return v;'
           master_item:
             key: cucm.perfmon.callmanager.raw
           tags:
@@ -467,7 +467,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: cucm.certificate.snapshot.raw
           delay: 12h
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           authtype: BASIC
@@ -485,7 +485,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: cucm.control.callmanager.raw
           delay: 5m
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           authtype: BASIC
@@ -510,7 +510,7 @@ zabbix_export:
           type: SCRIPT
           key: cucm.control.services.raw
           delay: 5m
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           params: 'var url=''{$CUCM.URL}/controlcenterservice2/services/ControlCenterServices'',auth=''Basic ''+btoa(''{$CUCM.API.USER}:{$CUCM.API.PASSWORD}''),ns=''http://schemas.cisco.com/ast/soap'';function call(op,p){var q=new HttpRequest(),b=''<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:n="''+ns+''"><s:Body><n:''+op+''>''+p+''</n:''+op+''></s:Body></s:Envelope>'';q.addHeader(''Content-Type: text/xml; charset=utf-8'');q.addHeader(''SOAPAction: ""'');q.addHeader(''Authorization: ''+auth);var r=q.post(url,b);if(q.getStatus()!==200||r.indexOf(''Fault'')>=0)throw ''ControlCenter request failed'';return r;}function esc(s){return s.replace(/&/g,''&amp;'').replace(/</g,''&lt;'').replace(/>/g,''&gt;'');}var listing=call(''getProductInformationList'',''<n:ServiceInfo>{$CUCM.NODE}</n:ServiceInfo>''),m,re=/<[^>]*ServiceName>([^<]+)<\/[^>]*ServiceName>/g,names=[],seen={},records=[];while((m=re.exec(listing))!==null){var name=m[1].trim();if(name&&!seen[name]){seen[name]=1;names.push(name);}}if(!names.length)throw ''no installed services'';for(var i=0;i<names.length;i+=64){var p='''';for(var j=i;j<Math.min(i+64,names.length);j++)p+=''<n:ServiceStatus>''+esc(names[j])+''</n:ServiceStatus>'';var response=call(''soapGetServiceStatus'',p);if(response.indexOf(''soapGetServiceStatusResponse'')<0)throw ''invalid ControlCenter status response'';records.push(response);}return records.join(''\n'');'
@@ -759,7 +759,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf(''Free KBytes''); if(p<0) throw ''counter not found''; var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p)); if(!r) throw ''value not found''; return Number(r[1])*1024;'
+                - 'var r=/<[^>]*Name>[^<]*\\Free KBytes<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid Free KBytes counter'';var v=Number(r[1]);if(!isFinite(v)||v<0)throw ''invalid Free KBytes value'';return v*1024;'
           master_item:
             key: cucm.perfmon.memory.raw
           tags:
@@ -775,7 +775,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf(''Total KBytes''); if(p<0) throw ''counter not found''; var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p)); if(!r) throw ''value not found''; return Number(r[1])*1024;'
+                - 'var r=/<[^>]*Name>[^<]*\\Total KBytes<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid Total KBytes counter'';var v=Number(r[1]);if(!isFinite(v)||v<0)throw ''invalid Total KBytes value'';return v*1024;'
           master_item:
             key: cucm.perfmon.memory.raw
           tags:
@@ -791,7 +791,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf(''% Mem Used''); if(p<0) throw ''counter not found''; var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p)); if(!r) throw ''value not found''; return Number(r[1])*1;'
+                - 'var r=/<[^>]*Name>[^<]*\\% Mem Used<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid memory-utilization counter'';var v=Number(r[1]);if(!isFinite(v)||v<0||v>100)throw ''invalid memory-utilization value'';return v;'
           master_item:
             key: cucm.perfmon.memory.raw
           tags:
@@ -977,7 +977,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: cucm.perfmon.axl.raw
           delay: 2m
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           authtype: BASIC
@@ -1002,7 +1002,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: cucm.perfmon.callmanager.raw
           delay: 2m
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           authtype: BASIC
@@ -1027,7 +1027,7 @@ zabbix_export:
           type: SCRIPT
           key: cucm.perfmon.cpu.master
           delay: 2m
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           params: 'var url=''{$CUCM.URL}/perfmonservice2/services/PerfmonService'', h=null, closed=false, result={ok:false,session_closed:false}; function x(op,p){var q=new HttpRequest(),b=''<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:n="http://schemas.cisco.com/ast/soap"><s:Body><n:''+op+''>''+p+''</n:''+op+''></s:Body></s:Envelope>'';q.addHeader(''Content-Type: text/xml'');q.addHeader(''SOAPAction: ""'');q.addHeader(''Authorization: Basic ''+btoa(''{$CUCM.API.USER}:{$CUCM.API.PASSWORD}''));var r=q.post(url,b);if(q.getStatus()!=200||r.indexOf(''Fault'')>=0)throw ''perfmon request failed'';return r;} function tag(s,n){var r=new RegExp(''<[^>]*''+n+''>\\s*([^<]+)'').exec(s);if(!r)throw ''missing ''+n;return r[1];}try{h=tag(x(''perfmonOpenSession'',''''),''perfmonOpenSessionReturn'');var c=''\\\\{$CUCM.NODE}\\Processor(_Total)\\% CPU Time'';x(''perfmonAddCounter'',''<n:SessionHandle>''+h+''</n:SessionHandle><n:ArrayOfCounter><n:Counter><n:Name>''+c+''</n:Name></n:Counter></n:ArrayOfCounter>'');x(''perfmonCollectSessionData'',''<n:SessionHandle>''+h+''</n:SessionHandle>'');Zabbix.sleep(15000);var d=x(''perfmonCollectSessionData'',''<n:SessionHandle>''+h+''</n:SessionHandle>''),v=Number(tag(d,''Value'')),cs=Number(tag(d,''CStatus''));if(cs!==0||v<0||v>100)throw ''invalid counter sample'';result={ok:true,cpu:v,cstatus:cs,sample_seconds:15,session_closed:false};}catch(e){result={ok:false,error:''perfmon collection failed'',session_closed:false};}finally{if(h!==null){try{x(''perfmonCloseSession'',''<n:SessionHandle>''+h+''</n:SessionHandle>'');closed=true;}catch(e){closed=false;}}result.session_closed=closed;}return JSON.stringify(result);'
@@ -1041,7 +1041,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: cucm.perfmon.dbreplication.raw
           delay: 5m
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           authtype: BASIC
@@ -1066,7 +1066,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: cucm.perfmon.memory.raw
           delay: 2m
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           authtype: BASIC
@@ -1091,7 +1091,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: cucm.perfmon.network.raw
           delay: 2m
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           authtype: BASIC
@@ -1116,7 +1116,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: cucm.perfmon.partition.raw
           delay: 5m
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           authtype: BASIC
@@ -1141,7 +1141,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: cucm.perfmon.processor.raw
           delay: 2m
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           authtype: BASIC
@@ -1166,7 +1166,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: cucm.perfmon.sip.raw
           delay: 2m
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           authtype: BASIC
@@ -1191,7 +1191,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: cucm.perfmon.system.raw
           delay: 5m
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           authtype: BASIC
@@ -1216,7 +1216,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: cucm.perfmon.systemperformance.raw
           delay: 2m
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           authtype: BASIC
@@ -1241,7 +1241,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: cucm.ris.health.raw
           delay: 5m
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           authtype: BASIC
@@ -1266,7 +1266,7 @@ zabbix_export:
           type: SCRIPT
           key: cucm.ris.sip.raw
           delay: '{$CUCM.SIP.RUNTIME.INTERVAL}'
-          history: '0'
+          history: 1d
           value_type: TEXT
           trends: '0'
           params: |
@@ -1284,7 +1284,7 @@ zabbix_export:
             }
             function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');}
             var axl='<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" xmlns:a="http://www.cisco.com/AXL/API/'+p.version+'"><s:Body><a:listSipTrunk><searchCriteria><name>%</name></searchCriteria><returnedTags><name></name></returnedTags></a:listSipTrunk></s:Body></s:Envelope>';
-            var a=post(p.url+'/axl/',axl,'"CUCM:DB ver='+p.version+' listSipTrunk"'),m,names=[],seen={},rx=/<(?:[^:>]+:)?sipTrunk\b[^>]*>[\s\S]*?<(?:[^:>]+:)?name>\s*([^<]+)\s*<\/(?:[^:>]+:)?name>[\s\S]*?<\/(?:[^:>]+:)?sipTrunk>/g;
+            var a=post(p.axl_url+'/axl/',axl,'"CUCM:DB ver='+p.version+' listSipTrunk"'),m,names=[],seen={},rx=/<(?:[^:>]+:)?sipTrunk\b[^>]*>[\s\S]*?<(?:[^:>]+:)?name>\s*([^<]+)\s*<\/(?:[^:>]+:)?name>[\s\S]*?<\/(?:[^:>]+:)?sipTrunk>/g;
             while((m=rx.exec(a))!==null){var n=m[1].trim();if(n&&!seen[n]){seen[n]=1;names.push(n);}}
             if(names.length>=2000)throw 'AXL SIP-trunk inventory exceeds safe RIS boundary';
             if(!names.length)return '<selectCmDeviceExtResponse><SelectCmDeviceResult><TotalDevicesFound>0</TotalDevicesFound></SelectCmDeviceResult></selectCmDeviceExtResponse>';
@@ -1297,9 +1297,11 @@ zabbix_export:
             while((nm=nr.exec(out))!==null){var node=nm[1].trim();dr.lastIndex=0;while((dm=dr.exec(nm[2]))!==null){var name=dm[1].trim(),status=dm[2].trim();if(!node||!name||!ok[status]||seen[name])throw 'invalid or duplicate RIS SIP-trunk runtime record';seen[name]=1;count++;normalized+='<CmDevice><Name>'+esc(name)+'</Name><Status>'+status+'</Status><NodeName>'+esc(node)+'</NodeName></CmDevice>';}}
             if(total&&Number(total[1])!==count)throw 'RIS SIP-trunk cardinality mismatch';
             return '<selectCmDeviceExtResponse><SelectCmDeviceResult><TotalDevicesFound>'+count+'</TotalDevicesFound>'+normalized+'</SelectCmDeviceResult></selectCmDeviceExtResponse>';
-          description: 'Internal transport/master item. A bounded read-only AXL inventory supplies explicit configured trunk names to selectCmDeviceExt because that operation rejects the all-device wildcard. One AXL plus at most one RIS request runs every five minutes. An empty successful response remains empty and is never converted into an invented Down state.'
+          description: 'Internal transport/master item. A bounded read-only Publisher AXL inventory supplies explicit configured trunk names to node-local selectCmDeviceExt because that operation rejects the all-device wildcard. One AXL plus at most one RIS request runs at {$CUCM.SIP.RUNTIME.INTERVAL}. An empty successful response remains empty and is never converted into an invented Down state.'
           timeout: 30s
           parameters:
+            - name: axl_url
+              value: '{$CUCM.AXL.URL}'
             - name: password
               value: '{$CUCM.API.PASSWORD}'
             - name: proxy
@@ -1453,7 +1455,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf(''Replicate_State'');if(p<0)throw ''counter absent'';var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw ''value absent'';var v=Number(r[1]);if(v<0||v>4||Math.floor(v)!==v)throw ''invalid replication state'';return v;'
+                - 'var r=/<[^>]*Name>[^<]*\\Replicate_State<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid replication-state counter'';var v=Number(r[1]);if(!isFinite(v)||v<0||v>4||Math.floor(v)!==v)throw ''invalid replication state'';return v;'
           master_item:
             key: cucm.perfmon.dbreplication.raw
           tags:
@@ -1478,7 +1480,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf(''IOPerSecond'');if(p<0)throw ''counter absent'';var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw ''value absent'';return Number(r[1]);'
+                - 'var r=/<[^>]*Name>[^<]*\\IOPerSecond<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid IOPerSecond counter'';var v=Number(r[1]);if(!isFinite(v)||v<0)throw ''invalid IOPerSecond value'';return v;'
           master_item:
             key: cucm.perfmon.system.raw
           tags:
@@ -1492,7 +1494,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf(''Total Processes'');if(p<0)throw ''counter absent'';var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw ''value absent'';return Number(r[1]);'
+                - 'var r=/<[^>]*Name>[^<]*\\Total Processes<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid Total Processes counter'';var v=Number(r[1]);if(!isFinite(v)||v<0||Math.floor(v)!==v)throw ''invalid Total Processes value'';return v;'
           master_item:
             key: cucm.perfmon.system.raw
           tags:
@@ -1506,7 +1508,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf(''Total Threads'');if(p<0)throw ''counter absent'';var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw ''value absent'';return Number(r[1]);'
+                - 'var r=/<[^>]*Name>[^<]*\\Total Threads<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid Total Threads counter'';var v=Number(r[1]);if(!isFinite(v)||v<0||Math.floor(v)!==v)throw ''invalid Total Threads value'';return v;'
           master_item:
             key: cucm.perfmon.system.raw
           tags:
@@ -1521,7 +1523,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf(''Total CPU Time'');if(p<0)throw ''counter absent'';var r=/<[^>]*Value>([^<]+)/.exec(value.slice(p));if(!r)throw ''value absent'';var v=Number(r[1])*0.01;if(v<0)throw ''invalid uptime'';return v;'
+                - 'var r=/<[^>]*Name>[^<]*\\Total CPU Time<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid Total CPU Time counter'';var v=Number(r[1])*0.01;if(!isFinite(v)||v<0)throw ''invalid uptime'';return v;'
           master_item:
             key: cucm.perfmon.system.raw
           tags:
@@ -1859,7 +1861,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var p=value.indexOf(''Partition({#PARTITION})'');if(p<0)throw ''partition absent'';var q=value.indexOf(''% Used'',p);var r=/<[^>]*Value>([^<]+)/.exec(value.slice(q));if(!r)throw ''counter absent'';return Number(r[1]);'
+                    - 'var r=/<[^>]*Name>[^<]*Partition\({#PARTITION}\)\\% Used<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)[\s\S]*?<[^>]*CStatus>([^<]+)/.exec(value);if(!r||Number(r[2])!==1)throw ''invalid partition-utilization counter'';var v=Number(r[1]);if(!isFinite(v)||v<0||v>100)throw ''invalid partition-utilization value'';return v;'
               master_item:
                 key: cucm.perfmon.partition.raw
               trigger_prototypes:
