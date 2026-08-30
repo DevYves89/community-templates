@@ -10,7 +10,7 @@ zabbix_export:
       description: 'CUCM 15 monitoring through read-only AXL, RISPort70, PerfMon, ControlCenter, and Certificate Management APIs. Before linking, create one dedicated CUCM application user and assign it to Standard CCM Server Monitoring plus a custom AXL read-only access control group containing Standard AXL API Users and Standard AXL Read Only API Access; store it in {$CUCM.API.USER} and {$CUCM.API.PASSWORD}. For certificate discovery, create a separate Cisco VOS account with certificate-API privilege 0 (read only) and store it in {$CUCM.OS.USER} and {$CUCM.OS.PASSWORD}. Set {$CUCM.URL}, {$CUCM.AXL.URL}, {$CUCM.CERT.URL}, {$CUCM.NODE}, and {$CUCM.FQDN} on the host. {$CUCM.AXL.URL} is the Publisher configuration endpoint for every node host; RIS is runtime-only. Active and Inactive VOS partitions remain visible but are excluded from generic capacity alarms because their image occupancy is expected. Maintainer: DevYves89.'
       vendor:
         name: Zabbix
-        version: 7.0-3
+        version: 7.0-4
       groups:
         - name: Templates/Telephony
       items:
@@ -1523,11 +1523,11 @@ zabbix_export:
             var out=post(p.url+'/realtimeservice2/services/RISService70',ris,'""'),total=/<(?:[^:>]+:)?TotalDevicesFound>\s*(\d+)/.exec(out);
             if(!/selectCmDevice(?:Ext)?Response/i.test(out))throw 'invalid RIS SIP-trunk response';
             if(total&&Number(total[1])>=2000)throw 'RIS SIP-trunk result may be truncated';
-            var ok={Registered:1,UnRegistered:1,Rejected:1,PartiallyRegistered:1,Unknown:1},nr=/<(?:[^:>]+:)?item>\s*<(?:[^:>]+:)?ReturnCode>[\s\S]*?<(?:[^:>]+:)?Name>\s*([^<]+)[\s\S]*?<(?:[^:>]+:)?CmDevices>([\s\S]*?)<\/(?:[^:>]+:)?CmDevices>/g,dr=/<(?:[^:>]+:)?item>\s*<(?:[^:>]+:)?Name>\s*([^<]+)[\s\S]*?<(?:[^:>]+:)?Status>\s*([^<]+)/g,nm,dm,normalized='',count=0,seen={};
-            while((nm=nr.exec(out))!==null){var node=nm[1].trim();dr.lastIndex=0;while((dm=dr.exec(nm[2]))!==null){var name=dm[1].trim(),status=dm[2].trim();if(!node||!name||!ok[status]||seen[name])throw 'invalid or duplicate RIS SIP-trunk runtime record';seen[name]=1;count++;normalized+='<CmDevice><Name>'+esc(name)+'</Name><Status>'+status+'</Status><NodeName>'+esc(node)+'</NodeName></CmDevice>';}}
+            var ok={Registered:1,UnRegistered:1,Rejected:1,PartiallyRegistered:1,Unknown:1},nr=/<(?:[^:>]+:)?item>\s*<(?:[^:>]+:)?ReturnCode>[\s\S]*?<(?:[^:>]+:)?Name>\s*([^<]+)[\s\S]*?<(?:[^:>]+:)?CmDevices>([\s\S]*?)<\/(?:[^:>]+:)?CmDevices>/g,dr=/<(?:[^:>]+:)?item>\s*<(?:[^:>]+:)?Name>\s*([^<]+)[\s\S]*?<(?:[^:>]+:)?Status>\s*([^<]+)[\s\S]*?<(?:[^:>]+:)?TimeStamp\b[^>]*>\s*([^<]+)\s*<\/(?:[^:>]+:)?TimeStamp>[\s\S]*?<\/(?:[^:>]+:)?item>/g,nm,dm,normalized='',count=0,seen={},now=Math.floor(Date.now()/1000);
+            while((nm=nr.exec(out))!==null){var node=nm[1].trim();dr.lastIndex=0;while((dm=dr.exec(nm[2]))!==null){var name=dm[1].trim(),status=dm[2].trim(),timestamp=Number(dm[3].trim());if(!node||!name||!ok[status]||seen[name])throw 'invalid or duplicate RIS SIP-trunk runtime record';if(!isFinite(timestamp)||timestamp<0||Math.floor(timestamp)!==timestamp||timestamp>now)throw 'invalid RIS SIP-trunk timestamp';if(status==='Registered'&&timestamp===0)throw 'registered RIS SIP-trunk timestamp absent';seen[name]=1;count++;normalized+='<CmDevice><Name>'+esc(name)+'</Name><Status>'+status+'</Status><NodeName>'+esc(node)+'</NodeName><TimeStamp>'+timestamp+'</TimeStamp></CmDevice>';}}
             if(total&&Number(total[1])!==count)throw 'RIS SIP-trunk cardinality mismatch';
             return '<selectCmDeviceExtResponse><SelectCmDeviceResult><TotalDevicesFound>'+count+'</TotalDevicesFound>'+normalized+'</SelectCmDeviceResult></selectCmDeviceExtResponse>';
-          description: 'Internal transport/master item. A bounded read-only Publisher AXL inventory supplies explicit configured trunk names to node-local selectCmDeviceExt because that operation rejects the all-device wildcard. One AXL plus at most one RIS request runs at {$CUCM.SIP.RUNTIME.INTERVAL}. An empty successful response remains empty and is never converted into an invented Down state.'
+          description: 'Internal transport/master item. A bounded read-only Publisher AXL inventory supplies explicit configured trunk names to node-local selectCmDeviceExt because that operation rejects the all-device wildcard. One AXL plus at most one RIS request runs at {$CUCM.SIP.RUNTIME.INTERVAL}. Genuine runtime records retain the validated registration-state timestamp for dependent full-service uptime; malformed or future timestamps fail closed. An empty successful response remains empty and is never converted into an invented Down state.'
           timeout: 30s
           parameters:
             - name: axl_url
@@ -1703,7 +1703,7 @@ zabbix_export:
           type: DEPENDENT
           key: cucm.system.dbreplication
           delay: '0'
-          description: 'CUCM PerfMon Replicate_State reported by this node. Valid integer states 0–4 are value-mapped; absent, malformed, or out-of-range counters fail preprocessing rather than reporting a synthetic healthy state. State 2 is Good Replication. Enable the expected-state macro only after an authoritative topology check confirms that replication is required.'
+          description: 'CUCM PerfMon Replicate_State reported by this node. States: 0 Initializing, 1 Replication setup in progress, 2 Good replication, 3 Bad replication, and 4 Replication setup failed. Absent, malformed, or out-of-range counters fail preprocessing rather than reporting a synthetic healthy state. Enable the expected-state macro only after an authoritative topology check confirms that replication is required.'
           valuemap:
             name: 'CUCM DB replication state'
           preprocessing:
@@ -1728,7 +1728,7 @@ zabbix_export:
               description: 'Replication is expected for this host, but CUCM PerfMon Replicate_State is not 2 (Good Replication). Investigate with the Cisco-supported dbreplication status workflow; this aggregate state does not identify the affected cluster node. Disable the expected-state macro only after an authoritative topology assessment confirms replication is not required.'
               tags:
                 - tag: component
-                  value: database
+                  value: replication
         - uuid: 01ed7ae1fdfd4e5d98bb209eb20ead02
           name: 'CUCM: disk IOPS'
           type: DEPENDENT
@@ -2488,12 +2488,44 @@ zabbix_export:
                   tags:
                     - tag: component
                       value: telephony
+            - uuid: 5b7a0d1c8e2f4a56b9c0d1e2f3a4b5c6
+              name: 'CUCM SIP trunk {#SIP.TRUNK}: time in full service'
+              type: DEPENDENT
+              key: 'cucm.sip.runtime.uptime[{#SIP.TRUNK}]'
+              delay: '0'
+              units: uptime
+              description: 'Elapsed seconds since RISPort70 last reported the registration-state transition for this trunk. Registered trunks expose their current full-service uptime; other genuine runtime states report 0. Invalid, missing, or future timestamps fail preprocessing.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var s="{#SIP.STATUS}",raw="{#SIP.TIMESTAMP}",now=Math.floor(Date.now()/1000);if(!/^\d+$/.test(raw))throw "RIS timestamp invalid";var t=Number(raw);if(!isFinite(t)||t<0||Math.floor(t)!==t||t>now)throw "RIS timestamp invalid";if(s==="Registered"){if(t===0)throw "registered RIS timestamp absent";return now-t;}if(s==="UnRegistered"||s==="Rejected"||s==="PartiallyRegistered"||s==="Unknown")return 0;throw "unknown RIS SIP-trunk status";'
+              master_item:
+                key: cucm.ris.sip.raw
+              tags:
+                - tag: component
+                  value: telephony
+                - tag: scope
+                  value: operator
+                - tag: sip_trunk
+                  value: '{#SIP.TRUNK}'
+                - tag: source
+                  value: risport70
+              trigger_prototypes:
+                - uuid: 6c8b1e2d9f304b67a0d1e2f3a4b5c6d7
+                  expression: '{$CUCM.SIP.TRUNK.EXPECTED:"{#SIP.TRUNK}"}=1 and last(/Cisco Unified Communications Manager 15 by API/cucm.sip.runtime.state[{#SIP.TRUNK}])=1 and last(/Cisco Unified Communications Manager 15 by API/cucm.sip.runtime.uptime[{#SIP.TRUNK}])>0 and last(/Cisco Unified Communications Manager 15 by API/cucm.sip.runtime.uptime[{#SIP.TRUNK}])<600'
+                  name: 'CUCM SIP trunk {#SIP.TRUNK} was re-registered recently'
+                  opdata: 'Uptime: {?last(//cucm.sip.runtime.uptime[{#SIP.TRUNK}])}; state: {?last(//cucm.sip.runtime.state[{#SIP.TRUNK}])}; node: {#SIP.NODE}'
+                  priority: INFO
+                  description: 'This expected SIP trunk entered Registered state less than ten minutes ago. Correlate the recent registration with peer, network, and CallManager events.'
+                  tags:
+                    - tag: component
+                      value: telephony
           master_item:
             key: cucm.ris.sip.raw
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var inc=new RegExp("{$CUCM.SIP.TRUNKS.TO_DISCOVER}"),exc=new RegExp("{$CUCM.SIP.TRUNKS.NOT_TO_DISCOVER}"),r=/<(?:[^:>]+:)?CmDevice>([\s\S]*?)<\/(?:[^:>]+:)?CmDevice>/g,m,a=[],seen={},ok={Registered:1,UnRegistered:1,Rejected:1,PartiallyRegistered:1,Unknown:1};function f(b,n){var x=new RegExp("<(?:[^:>]+:)?"+n+">\\s*([^<]+)").exec(b);return x?x[1].trim():"";}while((m=r.exec(value))!==null){var n=f(m[1],"Name"),s=f(m[1],"Status"),node=f(m[1],"NodeName");if(n&&!seen[n]&&inc.test(n)&&!exc.test(n)){if(!ok[s])throw "RIS SIP-trunk status invalid";if(!node)throw "RIS SIP-trunk node absent";seen[n]=1;a.push({"{#SIP.TRUNK}":n,"{#SIP.STATUS}":s,"{#SIP.NODE}":node});}}return JSON.stringify({data:a});'
+                - 'var inc=new RegExp("{$CUCM.SIP.TRUNKS.TO_DISCOVER}"),exc=new RegExp("{$CUCM.SIP.TRUNKS.NOT_TO_DISCOVER}"),r=/<(?:[^:>]+:)?CmDevice>([\s\S]*?)<\/(?:[^:>]+:)?CmDevice>/g,m,a=[],seen={},ok={Registered:1,UnRegistered:1,Rejected:1,PartiallyRegistered:1,Unknown:1},now=Math.floor(Date.now()/1000);function f(b,n){var x=new RegExp("<(?:[^:>]+:)?"+n+">\\s*([^<]+)").exec(b);return x?x[1].trim():"";}while((m=r.exec(value))!==null){var n=f(m[1],"Name"),s=f(m[1],"Status"),node=f(m[1],"NodeName"),raw=f(m[1],"TimeStamp");if(n&&!seen[n]&&inc.test(n)&&!exc.test(n)){if(!ok[s])throw "RIS SIP-trunk status invalid";if(!node)throw "RIS SIP-trunk node absent";if(!/^\d+$/.test(raw))throw "RIS SIP-trunk timestamp invalid";var ts=Number(raw);if(!isFinite(ts)||ts<0||Math.floor(ts)!==ts||ts>now||(s==="Registered"&&ts===0))throw "RIS SIP-trunk timestamp invalid";seen[n]=1;a.push({"{#SIP.TRUNK}":n,"{#SIP.STATUS}":s,"{#SIP.NODE}":node,"{#SIP.TIMESTAMP}":String(ts)});}}return JSON.stringify({data:a});'
         - uuid: d9bb6947950f40f0913622104f167772
           name: 'CUCM critical service discovery'
           type: DEPENDENT
@@ -2887,7 +2919,7 @@ zabbix_export:
             - name: Overview
               widgets:
                 - type: item
-                  name: 'Collection health'
+                  name: 'PerfMon health'
                   width: '12'
                   height: '5'
                   fields:
@@ -2956,7 +2988,7 @@ zabbix_export:
                 - type: svggraph
                   name: 'AXL dynamic-throttling telemetry'
                   'y': '15'
-                  width: '36'
+                  width: '24'
                   height: '10'
                   fields:
                     - type: STRING
@@ -3094,10 +3126,64 @@ zabbix_export:
                       name: show_problems
                       value: '1'
                 - type: svggraph
-                  name: 'Call processing and MGCP gateways'
-                  x: '36'
+                  name: 'Call-processing pressure'
+                  x: '24'
                   'y': '15'
-                  width: '36'
+                  width: '24'
+                  height: '10'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color.0
+                      value: ffcc00
+                    - type: STRING
+                      name: ds.0.color.1
+                      value: e31a1c
+                    - type: STRING
+                      name: ds.0.color.2
+                      value: 1f78b4
+                    - type: STRING
+                      name: ds.0.color.3
+                      value: 6a3d9a
+                    - type: INTEGER
+                      name: ds.0.dataset_type
+                      value: '0'
+                    - type: ITEM
+                      name: ds.0.itemids.0
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.callprocessing.code_yellow.state
+                    - type: ITEM
+                      name: ds.0.itemids.1
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.callprocessing.code_red.state
+                    - type: ITEM
+                      name: ds.0.itemids.2
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.callprocessing.expected_delay
+                    - type: ITEM
+                      name: ds.0.itemids.3
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.callprocessing.queue.high
+                    - type: INTEGER
+                      name: legend_lines
+                      value: '4'
+                    - type: INTEGER
+                      name: legend_statistic
+                      value: '1'
+                    - type: STRING
+                      name: reference
+                      value: DDDDD
+                    - type: INTEGER
+                      name: show_problems
+                      value: '1'
+                - type: svggraph
+                  name: 'SIP-trunk runtime states'
+                  x: '48'
+                  'y': '15'
+                  width: '24'
                   height: '10'
                   fields:
                     - type: STRING
@@ -3108,7 +3194,13 @@ zabbix_export:
                       value: ff7f00
                     - type: STRING
                       name: ds.0.color.2
-                      value: 1f78b4
+                      value: e31a1c
+                    - type: STRING
+                      name: ds.0.color.3
+                      value: 6a3d9a
+                    - type: STRING
+                      name: ds.0.color.4
+                      value: '999999'
                     - type: INTEGER
                       name: ds.0.dataset_type
                       value: '0'
@@ -3116,26 +3208,36 @@ zabbix_export:
                       name: ds.0.itemids.0
                       value:
                         host: 'Cisco Unified Communications Manager 15 by API'
-                        key: cucm.callmanager.calls.inprogress
+                        key: cucm.sip.runtime.registered
                     - type: ITEM
                       name: ds.0.itemids.1
                       value:
                         host: 'Cisco Unified Communications Manager 15 by API'
-                        key: cucm.callmanager.registered.mgcp
+                        key: cucm.sip.runtime.unregistered
                     - type: ITEM
                       name: ds.0.itemids.2
                       value:
                         host: 'Cisco Unified Communications Manager 15 by API'
-                        key: cucm.callprocessing.queue.high
+                        key: cucm.sip.runtime.rejected
+                    - type: ITEM
+                      name: ds.0.itemids.3
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.sip.runtime.partial
+                    - type: ITEM
+                      name: ds.0.itemids.4
+                      value:
+                        host: 'Cisco Unified Communications Manager 15 by API'
+                        key: cucm.sip.runtime.unknown
                     - type: INTEGER
                       name: legend_lines
-                      value: '3'
+                      value: '5'
                     - type: INTEGER
                       name: legend_statistic
                       value: '1'
                     - type: STRING
                       name: reference
-                      value: DDDDD
+                      value: EEEEE
                     - type: INTEGER
                       name: show_problems
                       value: '1'
@@ -3225,13 +3327,13 @@ zabbix_export:
             - value: '0'
               newvalue: Initializing
             - value: '1'
-              newvalue: 'Setup in progress'
+              newvalue: 'Replication setup in progress'
             - value: '2'
               newvalue: 'Good replication'
             - value: '3'
               newvalue: 'Bad replication'
             - value: '4'
-              newvalue: 'Setup failed'
+              newvalue: 'Replication setup failed'
         - uuid: da1ef64c8d2246a6a04dfb9f02e7a940
           name: 'CUCM service runtime state'
           mappings:

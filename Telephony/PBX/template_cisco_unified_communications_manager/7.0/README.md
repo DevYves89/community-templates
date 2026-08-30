@@ -5,7 +5,7 @@
 Monitors Cisco Unified Communications Manager 15 through read-only AXL,
 RISPort70, PerfMon, ControlCenter SOAP, and Cisco VOS Certificate Management
 APIs. The template is exported for Zabbix 7.0 and stores its template release
-as `vendor.name: Zabbix` and `vendor.version: 7.0-3`.
+as `vendor.name: Zabbix` and `vendor.version: 7.0-4`.
 
 Maintainer: DevYves89
 
@@ -45,6 +45,8 @@ Cisco documents the required access in the [AXL authentication
 guide](https://developer.cisco.com/docs/axl/authentication/), [PerfMon getting
 started guide](https://developer.cisco.com/site/sxml/learn/getting-started/perfmon/),
 [RISPort getting started guide](https://developer.cisco.com/site/sxml/learn/getting-started/risport/),
+[RISPort70 response contract](https://developer.cisco.com/docs/sxml/risport70-api/),
+[RIS timestamp-semantics clarification](https://community.cisco.com/t5/management/cucm-12-risport-quot-last-active-quot-and-quot-last-registered/td-p/4075726),
 and [Certificate Management authentication
 guide](https://developer.cisco.com/docs/certificate-management/authentication/).
 
@@ -61,11 +63,13 @@ guide](https://developer.cisco.com/docs/certificate-management/authentication/).
 - ControlCenter service state, reason, uptime and expected-service alarms.
 - Certificate discovery with expiry, Subject, Issuer, SAN, user-friendly Key
   Usage, and Extended Key Usage metadata from the existing PEM snapshot.
-- SIP-trunk PerfMon call statistics plus bounded RISPort70 registration and
-  registering-node discovery. A valid absent runtime record remains absent and
-  is never fabricated as Down.
+- SIP-trunk PerfMon call statistics plus bounded RISPort70 registration,
+  registering-node, and full-service-uptime discovery. A valid absent runtime
+  record remains absent and is never fabricated as Down; malformed or future
+  registration timestamps fail closed.
 - An RTMT-inspired operations overview with common health/system/workload
-  summary cards, performance graphs, AXL throttling, and current problems.
+  summary cards, performance graphs, AXL throttling, Code Yellow/Red,
+  expected delay, SIP runtime-state aggregates, and current problems.
 
 Latest Data uses stable item-tag axes: `scope=operator|internal`, functional
 `component`, and collector `source`. Discovered items additionally carry their
@@ -83,6 +87,12 @@ The template performs read-only API calls. Store passwords only as Zabbix
 secret macros. CUCM API availability, installed services, PerfMon counters,
 and certificate endpoints vary by deployment; unsupported APIs should be
 disabled or correctly provisioned rather than treated as a zero metric.
+
+Release 7.0-4 is the feature-frozen agentless infrastructure baseline.
+Phone-level monitoring, CDR/CMR call quality, DRS, NTP, hardware/core-dump
+alarms, RTMT alert ingestion, Smart Licensing, and unvalidated gateway
+discovery require separate optional templates or a newly proven bounded
+read-only source.
 
 ## License
 
