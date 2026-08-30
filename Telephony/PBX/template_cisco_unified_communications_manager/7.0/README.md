@@ -5,7 +5,7 @@
 Monitors Cisco Unified Communications Manager 15 through read-only AXL,
 RISPort70, PerfMon, ControlCenter SOAP, and Cisco VOS Certificate Management
 APIs. The template is exported for Zabbix 7.0 and stores its template release
-as `vendor.name: Zabbix` and `vendor.version: 7.0-2`.
+as `vendor.name: Zabbix` and `vendor.version: 7.0-3`.
 
 Maintainer: DevYves89
 
@@ -59,16 +59,19 @@ guide](https://developer.cisco.com/docs/certificate-management/authentication/).
 - CallManager media capacity, Average Expected Delay, Code Yellow/Red, and
   call-processing queue/rejection metrics.
 - ControlCenter service state, reason, uptime and expected-service alarms.
-- Certificate discovery with expiry, Subject, Issuer, and SAN metadata.
+- Certificate discovery with expiry, Subject, Issuer, SAN, user-friendly Key
+  Usage, and Extended Key Usage metadata from the existing PEM snapshot.
 - SIP-trunk PerfMon call statistics plus bounded RISPort70 registration and
   registering-node discovery. A valid absent runtime record remains absent and
   is never fabricated as Down.
 - An RTMT-inspired operations overview with common health/system/workload
   summary cards, performance graphs, AXL throttling, and current problems.
 
-Raw transport/master items are tagged `scope=internal`; operator-facing items
-are tagged `scope=operator`. Configure the discovery exclusion macros for the
-local topology before enabling alerts for optional resources.
+Latest Data uses stable item-tag axes: `scope=operator|internal`, functional
+`component`, and collector `source`. Discovered items additionally carry their
+concrete `certificate`, `partition`, `service`, or `sip_trunk` value;
+certificate fields use `metric=expiry|identity|usage`. Configure the discovery
+exclusion macros for the local topology before enabling optional alerts.
 
 AXL is configuration inventory rather than a per-node runtime API, so
 `{$CUCM.AXL.URL}` must name the Publisher for all hosts in a cluster. PerfMon,
