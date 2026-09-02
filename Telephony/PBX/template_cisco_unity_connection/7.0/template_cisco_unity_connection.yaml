@@ -7,10 +7,10 @@ zabbix_export:
     - uuid: 1d6c69fc149a48febbf6a61ce8dc3d33
       template: 'Cisco Unity Connection 15 by API'
       name: 'Cisco Unity Connection 15 by API'
-      description: 'Cisco Unity Connection 15 monitoring through read-only VMREST/CUPI, Cisco Serviceability PerfMon and ControlCenter SOAP, and the Cisco VOS Certificate Management API. Before linking, create a dedicated Unity user without a mailbox and assign Read Only Administrator for GET-only VMREST/CUPI and Serviceability monitoring; use System Administrator only as a compatibility fallback if the installed release rejects a required read endpoint. Store it in {$CUC.API.USER} and {$CUC.API.PASSWORD}. For certificate discovery, create a separate Cisco VOS account with certificate-API privilege 0 (read only) and store it in {$CUC.OS.USER} and {$CUC.OS.PASSWORD}. Set {$CUC.URL}, {$CUC.SERVICEABILITY.URL}, {$CUC.CERT.URL}, {$CUC.NODE}, and {$CUC.FQDN} on the host. Enable replication alerting only on a clustered node by setting {$CUC.REPLICATION.EXPECTED}=1. Operator items use scope=operator; transport/master payloads use scope=internal. Maintainer: DevYves89.'
+      description: 'Cisco Unity Connection 15 monitoring through read-only VMREST/CUPI, Cisco Serviceability PerfMon and ControlCenter SOAP, and the Cisco VOS Certificate Management API. Before linking, create a dedicated Unity user without a mailbox and assign Read Only Administrator for GET-only VMREST/CUPI and Serviceability monitoring; use System Administrator only as a compatibility fallback if the installed release rejects a required read endpoint. Store it in {$CUC.API.USER} and {$CUC.API.PASSWORD}. For certificate discovery, create a separate Cisco VOS account with certificate-API privilege 0 (read only) and store it in {$CUC.OS.USER} and {$CUC.OS.PASSWORD}; certificate Latest Data includes CN, issuer, SAN, UTC expiry, Key Usage, and Extended Key Usage from the existing PEM snapshot. Set {$CUC.URL}, {$CUC.SERVICEABILITY.URL}, {$CUC.CERT.URL}, {$CUC.NODE}, and {$CUC.FQDN} on the host. Enable replication alerting only on a clustered node by setting {$CUC.REPLICATION.EXPECTED}=1. Operator items use scope=operator; transport/master payloads use scope=internal. Maintainer: DevYves89.'
       vendor:
         name: Zabbix
-        version: 7.0-1
+        version: 7.0-3
       groups:
         - name: Templates/Telephony
       items:
@@ -1126,7 +1126,8 @@ zabbix_export:
           value_type: TEXT
           trends: '0'
           params: |
-            var url = '{$CUC.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService',
+            var p = JSON.parse(value),
+                url = p.url,
                 handle = null,
                 closed = false,
                 result = {ok: false, session_closed: false};
@@ -1137,7 +1138,7 @@ zabbix_export:
                         operation + '>' + payload + '</n:' + operation + '></s:Body></s:Envelope>';
                 request.addHeader('Content-Type: text/xml');
                 request.addHeader('SOAPAction: ""');
-                request.addHeader('Authorization: Basic ' + btoa('{$CUC.API.USER}:{$CUC.API.PASSWORD}'));
+                request.addHeader('Authorization: Basic ' + btoa(p.username + ':' + p.password));
                 response = request.post(url, body);
                 if (request.getStatus() !== 200 || response.indexOf('Fault') >= 0) {
                     throw operation + ' failed';
@@ -1153,7 +1154,7 @@ zabbix_export:
             
             try {
                 handle = tag(call('perfmonOpenSession', ''), 'perfmonOpenSessionReturn');
-                var counter = '\\\\{$CUC.NODE}\\Processor(_Total)\\% CPU Time';
+                var counter = '\\\\' + p.node + '\\Processor(_Total)\\% CPU Time';
                 call('perfmonAddCounter', '<n:SessionHandle>' + handle + '</n:SessionHandle><n:ArrayOfCounter><n:Counter><n:Name>' + counter + '</n:Name></n:Counter></n:ArrayOfCounter>');
                 call('perfmonCollectSessionData', '<n:SessionHandle>' + handle + '</n:SessionHandle>');
                 Zabbix.sleep(15000);
@@ -1181,6 +1182,15 @@ zabbix_export:
             return JSON.stringify(result);
           description: 'Internal transport/master item. Raw API payload for dependent operator items: CPU utilization and CPU collection health. Filter scope=internal; do not use this raw value for incident interpretation.'
           timeout: 45s
+          parameters:
+            - name: node
+              value: '{$CUC.NODE}'
+            - name: password
+              value: '{$CUC.API.PASSWORD}'
+            - name: url
+              value: '{$CUC.SERVICEABILITY.URL}/perfmonservice2/services/PerfmonService'
+            - name: username
+              value: '{$CUC.API.USER}'
           tags:
             - tag: component
               value: raw
@@ -1732,7 +1742,7 @@ zabbix_export:
             key: cuc.vmrest.inventory.raw
           tags:
             - tag: component
-              value: capacity
+              value: system
             - tag: scope
               value: operator
         - uuid: 02b64fdf8842463cb27bd80296065131
@@ -1755,7 +1765,7 @@ zabbix_export:
             key: cuc.vmrest.inventory.raw
           tags:
             - tag: component
-              value: inventory
+              value: system
             - tag: scope
               value: operator
         - uuid: 5b02ba522e9f4a09b32956ee05a4612a
@@ -1835,7 +1845,7 @@ zabbix_export:
                 result.available = 1;
             }
             catch (e) {
-                result.error = String(e);
+                throw 'CUC VMREST inventory collection failed';
             }
             result.response_time_ms = Date.now() - started;
             return JSON.stringify(result);
@@ -1868,7 +1878,7 @@ zabbix_export:
             key: cuc.perfmon.voice_sessions.raw
           tags:
             - tag: component
-              value: voice
+              value: telephony
             - tag: scope
               value: operator
           triggers:
@@ -1879,7 +1889,7 @@ zabbix_export:
               description: 'The cumulative failure counter increased since the previous sample. Correlate the timestamp with Unity services, ports, call routing, and application logs.'
               tags:
                 - tag: component
-                  value: voice
+                  value: telephony
         - uuid: 1733fbf006804fe1b08e77d0e97137b0
           name: 'CUC: opening greeting delay'
           type: DEPENDENT
@@ -1897,7 +1907,7 @@ zabbix_export:
             key: cuc.perfmon.voice_sessions.raw
           tags:
             - tag: component
-              value: voice
+              value: telephony
             - tag: scope
               value: operator
         - uuid: 511c8739060440bab6561394cf4d23e6
@@ -1916,7 +1926,7 @@ zabbix_export:
             key: cuc.perfmon.voice_sessions.raw
           tags:
             - tag: component
-              value: voice
+              value: telephony
             - tag: scope
               value: operator
       discovery_rules:
@@ -1936,7 +1946,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x)throw ''certificate absent'';var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++){if(a[i].indexOf(''---'')!==0&&a[i].length)s+=new TextDecoder().decode(atob(a[i]));}var m=s.match(/(\d{12})[\s\S]*(\d{12})/);if(!m)throw ''expiry not found'';var z=m[2],y=2000+Number(z.slice(0,2)),mo=Number(z.slice(2,4))-1,da=Number(z.slice(4,6)),h=Number(z.slice(6,8)),mi=Number(z.slice(8,10)),se=Number(z.slice(10,12));return Math.floor((Date.UTC(y,mo,da,h,mi,se)-Date.now())/86400000);'
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x)throw ''certificate absent'';var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++){if(a[i].indexOf(''---'')!==0&&a[i].length){var z=atob(a[i]);for(var h=0;h<z.length;h++)s+=String.fromCharCode(typeof z[h]===''number''?z[h]:z.charCodeAt(h));}}var m=s.match(/(\d{12})[\s\S]*(\d{12})/);if(!m)throw ''expiry not found'';var z=m[2],y=2000+Number(z.slice(0,2)),mo=Number(z.slice(2,4))-1,da=Number(z.slice(4,6)),h=Number(z.slice(6,8)),mi=Number(z.slice(8,10)),se=Number(z.slice(10,12));return Math.floor((Date.UTC(y,mo,da,h,mi,se)-Date.now())/86400000);'
               master_item:
                 key: cuc.certificate.snapshot.raw
               tags:
@@ -1950,7 +1960,7 @@ zabbix_export:
                   description: 'The discovered identity certificate crossed this expiry threshold. Renew or replace it and validate dependent services before expiration.'
                   tags:
                     - tag: component
-                      value: certificate
+                      value: certificates
                 - uuid: 3a1cbf23562e43d99ee6195efa159fbb
                   expression: 'last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])<{$CUC.CERT.DISASTER} and last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])>=0'
                   name: 'CUC certificate {#CERT.NAME} expires within 7 days'
@@ -1958,7 +1968,7 @@ zabbix_export:
                   description: 'The discovered identity certificate crossed this expiry threshold. Renew or replace it and validate dependent services before expiration.'
                   tags:
                     - tag: component
-                      value: certificate
+                      value: certificates
                 - uuid: 3f89d6198265433797f537871daac781
                   expression: 'last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])<{$CUC.CERT.HIGH} and last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])>={$CUC.CERT.DISASTER}'
                   name: 'CUC certificate {#CERT.NAME} expires within 30 days'
@@ -1966,7 +1976,7 @@ zabbix_export:
                   description: 'The discovered identity certificate crossed this expiry threshold. Renew or replace it and validate dependent services before expiration.'
                   tags:
                     - tag: component
-                      value: certificate
+                      value: certificates
                 - uuid: 79416ffb47e64d1381591195e8e63987
                   expression: 'last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])<{$CUC.CERT.INFO} and last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])>={$CUC.CERT.WARN}'
                   name: 'CUC certificate {#CERT.NAME} expires within 90 days'
@@ -1974,7 +1984,7 @@ zabbix_export:
                   description: 'The discovered identity certificate crossed this expiry threshold. Renew or replace it and validate dependent services before expiration.'
                   tags:
                     - tag: component
-                      value: certificate
+                      value: certificates
                 - uuid: f69b51ae52e74f55be20a85e8a379457
                   expression: 'last(/Cisco Unity Connection 15 by API/cuc.certificate.days[{#CERT.NAME}])<0'
                   name: 'CUC certificate {#CERT.NAME} has expired'
@@ -1982,7 +1992,7 @@ zabbix_export:
                   description: 'The discovered identity certificate crossed this expiry threshold. Renew or replace it and validate dependent services before expiration.'
                   tags:
                     - tag: component
-                      value: certificate
+                      value: certificates
             - uuid: db13945e107c483a8912ec750aff79d8
               name: 'CUC: certificate {#CERT.NAME}: issuer common name'
               type: DEPENDENT
@@ -1999,7 +2009,7 @@ zabbix_export:
                 key: 'cuc.certificate.issuer[{#CERT.NAME}]'
               tags:
                 - tag: component
-                  value: certificate
+                  value: certificates
                 - tag: scope
                   value: operator
             - uuid: 3d6962fe647b4ae68afbba424412a5e2
@@ -2013,12 +2023,12 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x)throw ''certificate absent'';var s='''',a=x.certificate.split(''\n'');for(var i=0;i<a.length;i++)if(a[i].indexOf(''---'')!==0&&a[i].length)s+=a[i];var b=atob(s);function t(p){var q=p+1,n=b[q++];if(n&128){var z=n&127;n=0;while(z--)n=n*256+b[q++];}return {t:b[p],v:q,e:q+n};}function o(n){var q=n.v,v=b[q++],r=v<40?0:Math.floor(v/40),z=v<40?v: v-r*40,a=[r,z];while(q<n.e){v=0;do{z=b[q++];v=v*128+(z&127);}while(z&128);a.push(v);}return a.join(''.'');}function v(n){var s='''';for(var q=n.v;q<n.e;q++)s+=String.fromCharCode(b[q]);return s;}function name(n){var q=n.v,a=[];while(q<n.e){var r=t(q);q=r.e;var p=r.v;while(p<r.e){var e=t(p);p=e.e;var k=t(e.v),w=t(k.e),m={''2.5.4.3'':''CN'',''2.5.4.6'':''C'',''2.5.4.7'':''L'',''2.5.4.8'':''ST'',''2.5.4.10'':''O'',''2.5.4.11'':''OU''};a.push((m[o(k)]||o(k))+''=''+v(w));}}return a.join('', '');}var c=t(0),q=t(c.v),p=q.v,e=t(p);if(e.t===160)p=e.e;p=t(p).e;p=t(p).e;return name(t(p));'
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x)throw ''certificate absent'';var s='''',a=x.certificate.split(''\n'');for(var i=0;i<a.length;i++)if(a[i].indexOf(''---'')!==0&&a[i].length)s+=a[i];var z=atob(s),b=[];for(var h=0;h<z.length;h++)b.push(typeof z[h]===''number''?z[h]:z.charCodeAt(h));function t(p){var q=p+1,n=b[q++];if(n&128){var z=n&127;n=0;while(z--)n=n*256+b[q++];}return {t:b[p],v:q,e:q+n};}function o(n){var q=n.v,v=b[q++],r=v<40?0:Math.floor(v/40),z=v<40?v: v-r*40,a=[r,z];while(q<n.e){v=0;do{z=b[q++];v=v*128+(z&127);}while(z&128);a.push(v);}return a.join(''.'');}function v(n){var s='''';for(var q=n.v;q<n.e;q++)s+=String.fromCharCode(b[q]);return s;}function name(n){var q=n.v,a=[];while(q<n.e){var r=t(q);q=r.e;var p=r.v;while(p<r.e){var e=t(p);p=e.e;var k=t(e.v),w=t(k.e),m={''2.5.4.3'':''CN'',''2.5.4.6'':''C'',''2.5.4.7'':''L'',''2.5.4.8'':''ST'',''2.5.4.10'':''O'',''2.5.4.11'':''OU''};a.push((m[o(k)]||o(k))+''=''+v(w));}}return a.join('', '');}var c=t(0),q=t(c.v),p=q.v,e=t(p);if(e.t===160)p=e.e;p=t(p).e;p=t(p).e;return name(t(p));'
               master_item:
                 key: cuc.certificate.snapshot.raw
               tags:
                 - tag: component
-                  value: certificate
+                  value: certificates
                 - tag: scope
                   value: operator
             - uuid: 27f320e8fad942dab70cfe51fd85baa9
@@ -2032,12 +2042,12 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++){if(a[i].indexOf(''---'')!==0&&a[i].length)s+=new TextDecoder().decode(atob(a[i]));}var m=s.match(/(\d{12})[\s\S]*(\d{12})/);if(!m)throw ''expiry absent'';var z=m[2],y=2000+Number(z.slice(0,2)),mo=Number(z.slice(2,4)),da=Number(z.slice(4,6)),h=Number(z.slice(6,8)),mi=Number(z.slice(8,10)),se=Number(z.slice(10,12));if(mo<1||mo>12||da<1||da>31||h>23||mi>59||se>59)throw ''invalid expiry'';function p(n){return (''0''+n).slice(-2);}return [y,p(mo),p(da)].join(''-'')+''T''+[p(h),p(mi),p(se)].join('':'')+''Z'';'
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++){if(a[i].indexOf(''---'')!==0&&a[i].length){var z=atob(a[i]);for(var h=0;h<z.length;h++)s+=String.fromCharCode(typeof z[h]===''number''?z[h]:z.charCodeAt(h));}}var m=s.match(/(\d{12})[\s\S]*(\d{12})/);if(!m)throw ''expiry absent'';var z=m[2],y=2000+Number(z.slice(0,2)),mo=Number(z.slice(2,4)),da=Number(z.slice(4,6)),h=Number(z.slice(6,8)),mi=Number(z.slice(8,10)),se=Number(z.slice(10,12));if(mo<1||mo>12||da<1||da>31||h>23||mi>59||se>59)throw ''invalid expiry'';function p(n){return (''0''+n).slice(-2);}return [y,p(mo),p(da)].join(''-'')+''T''+[p(h),p(mi),p(se)].join('':'')+''Z'';'
               master_item:
                 key: cuc.certificate.snapshot.raw
               tags:
                 - tag: component
-                  value: certificate
+                  value: certificates
                 - tag: scope
                   value: operator
             - uuid: 2ce458ea00474bfcb852be2db7d536d2
@@ -2051,14 +2061,88 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var pem=x.certificate;if(!/^-----BEGIN CERTIFICATE-----\s*[\s\S]*\s*-----END CERTIFICATE-----\s*$/.test(pem))throw ''invalid PEM framing'';var p=pem.replace(/-----[^-]+-----|\s/g,'''');if(!p)throw ''PEM absent'';var z=atob(p),b='''';for(var h=0;h<z.length;h++)b+=String.fromCharCode(z[h]);var n=b.length;function B(q){return b.charCodeAt(q);}function r(q){if(q+2>n)throw ''truncated DER'';var t=B(q++),l=B(q++),u;if(l&128){u=l&127;if(!u||u>4||q+u>n)throw ''invalid DER length'';l=0;while(u--)l=l*256+B(q++);}if(q+l>n)throw ''truncated DER'';return {t:t,v:q,e:q+l,n:q+l};}function txt(a){return b.slice(a.v,a.e);}function ip(a){var q=a.v,o=[];if(a.e-q===4){for(;q<a.e;q++)o.push(B(q));return o.join(''.'');}if(a.e-q!==16)throw ''invalid SAN IP'';for(var i=0;i<8;i++,q+=2)o.push((B(q)*256+B(q+1)).toString(16));return o.join('':'');}var top=r(0);if(top.t!==48||top.e!==n)throw ''invalid certificate DER'';var tbs=r(top.v);if(tbs.t!==48||tbs.e>top.e)throw ''invalid TBSCertificate'';var sigalg=r(tbs.n),sigval=r(sigalg.n);if(sigalg.t!==48||sigval.t!==3||sigval.n!==top.e||sigval.e-sigval.v<2)throw ''invalid certificate signature structure'';var algoid=r(sigalg.v);if(algoid.t!==6)throw ''invalid signature algorithm'';if(algoid.n<sigalg.e&&r(algoid.n).n!==sigalg.e)throw ''invalid signature parameters'';var unused=B(sigval.v);if(unused>7||(unused&&((B(sigval.e-1)&((1<<unused)-1))!==0)))throw ''invalid signature bit string'';var q=tbs.v,a=r(q);if(a.t===160){q=a.n;a=r(q);}q=a.n;for(var skip=0;skip<5;skip++){a=r(q);q=a.n;}var ext=null;while(q<tbs.e){a=r(q);q=a.n;if(a.t===163){if(ext)throw ''duplicate extensions'';ext=a;}}if(!ext)return ''No SAN extension'';var seq=r(ext.v);if(seq.t!==48||seq.e!==ext.e)throw ''invalid extensions'';var sanv=null;for(q=seq.v;q<seq.e;){var one=r(q);q=one.n;if(one.t!==48)throw ''invalid extension'';var e=r(one.v);if(e.t!==6)throw ''extension OID absent'';var san=e.e-e.v===3&&B(e.v)===85&&B(e.v+1)===29&&B(e.v+2)===17;var v=r(e.n);if(v.t===1)v=r(v.n);if(v.t!==4||v.n!==one.e)throw ''invalid extension value'';if(san){if(sanv)throw ''duplicate SAN extension'';sanv=v;}}if(!sanv)return ''No SAN extension'';var names=r(sanv.v);if(names.t!==48||names.e!==sanv.e)throw ''invalid SAN sequence'';var out=[];for(var j=names.v;j<names.e;){var g=r(j);j=g.n;if(g.t===130)out.push(''DNS:''+txt(g));else if(g.t===135)out.push(''IP:''+ip(g));else if(g.t===134)out.push(''URI:''+txt(g));else if(g.t===129)out.push(''RFC822:''+txt(g));}return out.length?out.join('', ''):''No SAN extension'';'
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var pem=x.certificate;if(!/^-----BEGIN CERTIFICATE-----\s*[\s\S]*\s*-----END CERTIFICATE-----\s*$/.test(pem))throw ''invalid PEM framing'';var p=pem.replace(/-----[^-]+-----|\s/g,'''');if(!p)throw ''PEM absent'';var z=atob(p),b='''';for(var h=0;h<z.length;h++)b+=String.fromCharCode(typeof z[h]===''number''?z[h]:z.charCodeAt(h));var n=b.length;function B(q){return b.charCodeAt(q);}function r(q){if(q+2>n)throw ''truncated DER'';var t=B(q++),l=B(q++),u;if(l&128){u=l&127;if(!u||u>4||q+u>n)throw ''invalid DER length'';l=0;while(u--)l=l*256+B(q++);}if(q+l>n)throw ''truncated DER'';return {t:t,v:q,e:q+l,n:q+l};}function txt(a){return b.slice(a.v,a.e);}function ip(a){var q=a.v,o=[];if(a.e-q===4){for(;q<a.e;q++)o.push(B(q));return o.join(''.'');}if(a.e-q!==16)throw ''invalid SAN IP'';for(var i=0;i<8;i++,q+=2)o.push((B(q)*256+B(q+1)).toString(16));return o.join('':'');}var top=r(0);if(top.t!==48||top.e!==n)throw ''invalid certificate DER'';var tbs=r(top.v);if(tbs.t!==48||tbs.e>top.e)throw ''invalid TBSCertificate'';var sigalg=r(tbs.n),sigval=r(sigalg.n);if(sigalg.t!==48||sigval.t!==3||sigval.n!==top.e||sigval.e-sigval.v<2)throw ''invalid certificate signature structure'';var algoid=r(sigalg.v);if(algoid.t!==6)throw ''invalid signature algorithm'';if(algoid.n<sigalg.e&&r(algoid.n).n!==sigalg.e)throw ''invalid signature parameters'';var unused=B(sigval.v);if(unused>7||(unused&&((B(sigval.e-1)&((1<<unused)-1))!==0)))throw ''invalid signature bit string'';var q=tbs.v,a=r(q);if(a.t===160){q=a.n;a=r(q);}q=a.n;for(var skip=0;skip<5;skip++){a=r(q);q=a.n;}var ext=null;while(q<tbs.e){a=r(q);q=a.n;if(a.t===163){if(ext)throw ''duplicate extensions'';ext=a;}}if(!ext)return ''No SAN extension'';var seq=r(ext.v);if(seq.t!==48||seq.e!==ext.e)throw ''invalid extensions'';var sanv=null;for(q=seq.v;q<seq.e;){var one=r(q);q=one.n;if(one.t!==48)throw ''invalid extension'';var e=r(one.v);if(e.t!==6)throw ''extension OID absent'';var san=e.e-e.v===3&&B(e.v)===85&&B(e.v+1)===29&&B(e.v+2)===17;var v=r(e.n);if(v.t===1)v=r(v.n);if(v.t!==4||v.n!==one.e)throw ''invalid extension value'';if(san){if(sanv)throw ''duplicate SAN extension'';sanv=v;}}if(!sanv)return ''No SAN extension'';var names=r(sanv.v);if(names.t!==48||names.e!==sanv.e)throw ''invalid SAN sequence'';var out=[];for(var j=names.v;j<names.e;){var g=r(j);j=g.n;if(g.t===130)out.push(''DNS:''+txt(g));else if(g.t===135)out.push(''IP:''+ip(g));else if(g.t===134)out.push(''URI:''+txt(g));else if(g.t===129)out.push(''RFC822:''+txt(g));}return out.length?out.join('', ''):''No SAN extension'';'
               master_item:
                 key: cuc.certificate.snapshot.raw
               tags:
                 - tag: component
-                  value: certificate
+                  value: certificates
                 - tag: scope
                   value: operator
+            - uuid: 6d2a4e5af4bc4abcb58779a58f8c9e01
+              name: 'CUC internal: certificate {#CERT.NAME} usage extensions raw/master'
+              type: DEPENDENT
+              key: 'cuc.certificate.usages.raw[{#CERT.NAME}]'
+              delay: '0'
+              history: 1d
+              value_type: TEXT
+              trends: '0'
+              description: 'Internal parsed master for the operator-facing Key Usage and Extended Key Usage items. It decodes both X.509 extensions once from the existing PEM snapshot and adds no Certificate Management request.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var pem=x.certificate;if(!/^-----BEGIN CERTIFICATE-----\s*[\s\S]*\s*-----END CERTIFICATE-----\s*$/.test(pem))throw ''invalid PEM framing'';var p=pem.replace(/-----[^-]+-----|\s/g,'''');if(!p)throw ''PEM absent'';var z=atob(p),b='''';for(var h=0;h<z.length;h++)b+=String.fromCharCode(typeof z[h]===''number''?z[h]:z.charCodeAt(h));var n=b.length;function B(q){return b.charCodeAt(q);}function r(q){if(q+2>n)throw ''truncated DER'';var t=B(q++),l=B(q++),u;if(l&128){u=l&127;if(!u||u>4||q+u>n)throw ''invalid DER length'';l=0;while(u--)l=l*256+B(q++);}if(q+l>n)throw ''truncated DER'';return {t:t,v:q,e:q+l,n:q+l};}function O(a){if(a.t!==6||a.v>=a.e)throw ''invalid extension OID'';var q=a.v,v=0,z,out=[];do{z=B(q++);v=v*128+(z&127);if(q>a.e)throw ''invalid extension OID'';}while(z&128);if(v<40)out=[0,v];else if(v<80)out=[1,v-40];else out=[2,v-80];while(q<a.e){v=0;do{z=B(q++);v=v*128+(z&127);if(q>a.e)throw ''invalid extension OID'';}while(z&128);out.push(v);}return out.join(''.'');}var top=r(0);if(top.t!==48||top.e!==n)throw ''invalid certificate DER'';var tbs=r(top.v);if(tbs.t!==48||tbs.e>top.e)throw ''invalid TBSCertificate'';var q=tbs.v,a=r(q);if(a.t===160){q=a.n;a=r(q);}q=a.n;for(var skip=0;skip<5;skip++){a=r(q);q=a.n;}var extNode=null;while(q<tbs.e){a=r(q);q=a.n;if(a.t===163){if(extNode)throw ''duplicate extensions'';extNode=a;}}var ext={};if(extNode){var seq=r(extNode.v);if(seq.t!==48||seq.e!==extNode.e)throw ''invalid extensions'';for(q=seq.v;q<seq.e;){var one=r(q);q=one.n;if(one.t!==48)throw ''invalid extension'';var oidNode=r(one.v),id=O(oidNode),pos=oidNode.n,field=r(pos);if(field.t===1){pos=field.n;field=r(pos);}if(field.t!==4||field.n!==one.e)throw ''invalid extension value'';if(ext[id])throw ''duplicate extension ''+id;ext[id]=field;}}function keyUsage(){var oct=ext[''2.5.29.15''];if(!oct)return ''No Key Usage extension'';var bits=r(oct.v);if(bits.t!==3||bits.n!==oct.e||bits.e-bits.v<2)throw ''invalid Key Usage'';var unused=B(bits.v),start=bits.v+1;if(unused>7||(unused&&((B(bits.e-1)&((1<<unused)-1))!==0)))throw ''invalid Key Usage bits'';var total=(bits.e-start)*8-unused,names=[''Digital signature'',''Content commitment'',''Key encipherment'',''Data encipherment'',''Key agreement'',''Certificate signing'',''CRL signing'',''Encipher only'',''Decipher only''],out=[];for(var i=0;i<names.length&&i<total;i++)if(B(start+Math.floor(i/8))&(128>>(i%8)))out.push(names[i]);if(!out.length)throw ''empty Key Usage'';return out.join('', '');}function extendedKeyUsage(){var oct=ext[''2.5.29.37''];if(!oct)return ''No Extended Key Usage extension'';var seq=r(oct.v);if(seq.t!==48||seq.n!==oct.e)throw ''invalid Extended Key Usage'';var names={''2.5.29.37.0'':''Any extended key usage'',''1.3.6.1.5.5.7.3.1'':''TLS web server authentication'',''1.3.6.1.5.5.7.3.2'':''TLS web client authentication'',''1.3.6.1.5.5.7.3.3'':''Code signing'',''1.3.6.1.5.5.7.3.4'':''Email protection'',''1.3.6.1.5.5.7.3.5'':''IPsec end system'',''1.3.6.1.5.5.7.3.6'':''IPsec tunnel'',''1.3.6.1.5.5.7.3.7'':''IPsec user'',''1.3.6.1.5.5.7.3.8'':''Time stamping'',''1.3.6.1.5.5.7.3.9'':''OCSP signing'',''1.3.6.1.4.1.311.20.2.2'':''Smart card logon''},out=[];for(var q=seq.v;q<seq.e;){var oid=O(r(q));q=r(q).n;out.push(names[oid]||(''OID ''+oid));}if(!out.length)throw ''empty Extended Key Usage'';return out.join('', '');}return JSON.stringify({key_usage:keyUsage(),extended_key_usage:extendedKeyUsage()});'
+              master_item:
+                key: cuc.certificate.snapshot.raw
+              tags:
+                - tag: certificate
+                  value: '{#CERT.NAME}'
+                - tag: component
+                  value: certificates
+                - tag: scope
+                  value: internal
+                - tag: source
+                  value: certificate-management
+            - uuid: 6d2a4e5af4bc4abcb58779a58f8c9e02
+              name: 'CUC certificate {#CERT.NAME}: key usage'
+              type: DEPENDENT
+              key: 'cuc.certificate.key_usage[{#CERT.NAME}]'
+              tags:
+                - tag: component
+                  value: certificates
+                - tag: certificate
+                  value: '{#CERT.NAME}'
+                - tag: metric
+                  value: usage
+                - tag: scope
+                  value: operator
+                - tag: source
+                  value: certificate-management
+              delay: '0'
+              value_type: TEXT
+              trends: '0'
+              description: 'User-friendly X.509 Key Usage names derived from the existing PEM snapshot. A valid certificate without the extension reports No Key Usage extension; malformed DER fails closed.'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.key_usage
+              master_item:
+                key: 'cuc.certificate.usages.raw[{#CERT.NAME}]'
+            - uuid: 6d2a4e5af4bc4abcb58779a58f8c9e03
+              name: 'CUC certificate {#CERT.NAME}: extended key usage'
+              type: DEPENDENT
+              key: 'cuc.certificate.extended_key_usage[{#CERT.NAME}]'
+              tags:
+                - tag: component
+                  value: certificates
+                - tag: certificate
+                  value: '{#CERT.NAME}'
+                - tag: metric
+                  value: usage
+                - tag: scope
+                  value: operator
+                - tag: source
+                  value: certificate-management
+              delay: '0'
+              value_type: TEXT
+              trends: '0'
+              description: 'User-friendly X.509 Extended Key Usage names derived from the existing PEM snapshot. Common TLS, signing, email, IPsec, time-stamping, OCSP, and smart-card purposes are named; unknown purposes remain visible as OIDs. A valid certificate without the extension reports No Extended Key Usage extension.'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.extended_key_usage
+              master_item:
+                key: 'cuc.certificate.usages.raw[{#CERT.NAME}]'
             - uuid: 9303e784f2814b75833a6a52c6fc5cec
               name: 'CUC: certificate {#CERT.NAME}: subject common name'
               type: DEPENDENT
@@ -2075,7 +2159,7 @@ zabbix_export:
                 key: 'cuc.certificate.subject[{#CERT.NAME}]'
               tags:
                 - tag: component
-                  value: certificate
+                  value: certificates
                 - tag: scope
                   value: operator
             - uuid: ac5f09d86caf4b39bd1bc110ae5d1ed2
@@ -2089,12 +2173,12 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x)throw ''certificate absent'';var s='''',a=x.certificate.split(''\n'');for(var i=0;i<a.length;i++)if(a[i].indexOf(''---'')!==0&&a[i].length)s+=a[i];var b=atob(s);function t(p){var q=p+1,n=b[q++];if(n&128){var z=n&127;n=0;while(z--)n=n*256+b[q++];}return {t:b[p],v:q,e:q+n};}function o(n){var q=n.v,v=b[q++],r=v<40?0:Math.floor(v/40),z=v<40?v: v-r*40,a=[r,z];while(q<n.e){v=0;do{z=b[q++];v=v*128+(z&127);}while(z&128);a.push(v);}return a.join(''.'');}function v(n){var s='''';for(var q=n.v;q<n.e;q++)s+=String.fromCharCode(b[q]);return s;}function name(n){var q=n.v,a=[];while(q<n.e){var r=t(q);q=r.e;var p=r.v;while(p<r.e){var e=t(p);p=e.e;var k=t(e.v),w=t(k.e),m={''2.5.4.3'':''CN'',''2.5.4.6'':''C'',''2.5.4.7'':''L'',''2.5.4.8'':''ST'',''2.5.4.10'':''O'',''2.5.4.11'':''OU''};a.push((m[o(k)]||o(k))+''=''+v(w));}}return a.join('', '');}var c=t(0),q=t(c.v),p=q.v,e=t(p);if(e.t===160)p=e.e;p=t(p).e;p=t(p).e;p=t(p).e;p=t(p).e;return name(t(p));'
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x)throw ''certificate absent'';var s='''',a=x.certificate.split(''\n'');for(var i=0;i<a.length;i++)if(a[i].indexOf(''---'')!==0&&a[i].length)s+=a[i];var z=atob(s),b=[];for(var h=0;h<z.length;h++)b.push(typeof z[h]===''number''?z[h]:z.charCodeAt(h));function t(p){var q=p+1,n=b[q++];if(n&128){var z=n&127;n=0;while(z--)n=n*256+b[q++];}return {t:b[p],v:q,e:q+n};}function o(n){var q=n.v,v=b[q++],r=v<40?0:Math.floor(v/40),z=v<40?v: v-r*40,a=[r,z];while(q<n.e){v=0;do{z=b[q++];v=v*128+(z&127);}while(z&128);a.push(v);}return a.join(''.'');}function v(n){var s='''';for(var q=n.v;q<n.e;q++)s+=String.fromCharCode(b[q]);return s;}function name(n){var q=n.v,a=[];while(q<n.e){var r=t(q);q=r.e;var p=r.v;while(p<r.e){var e=t(p);p=e.e;var k=t(e.v),w=t(k.e),m={''2.5.4.3'':''CN'',''2.5.4.6'':''C'',''2.5.4.7'':''L'',''2.5.4.8'':''ST'',''2.5.4.10'':''O'',''2.5.4.11'':''OU''};a.push((m[o(k)]||o(k))+''=''+v(w));}}return a.join('', '');}var c=t(0),q=t(c.v),p=q.v,e=t(p);if(e.t===160)p=e.e;p=t(p).e;p=t(p).e;p=t(p).e;p=t(p).e;return name(t(p));'
               master_item:
                 key: cuc.certificate.snapshot.raw
               tags:
                 - tag: component
-                  value: certificate
+                  value: certificates
                 - tag: scope
                   value: operator
           master_item:
@@ -2360,7 +2444,7 @@ zabbix_export:
                 key: cuc.control.services.raw
               tags:
                 - tag: component
-                  value: service
+                  value: services
                 - tag: scope
                   value: operator
             - uuid: 7baf1d28e1ac41cb81d2cbabb65b9238
@@ -2390,7 +2474,7 @@ zabbix_export:
                 key: cuc.control.services.raw
               tags:
                 - tag: component
-                  value: service
+                  value: services
                 - tag: scope
                   value: operator
               trigger_prototypes:
@@ -2401,7 +2485,7 @@ zabbix_export:
                   description: 'A discovered critical Unity/VOS service is not running. Review the ControlCenter reason item before starting or restarting services.'
                   tags:
                     - tag: component
-                      value: service
+                      value: services
             - uuid: 2bc4bc6c17a541b28e52d687a4058321
               name: 'CUC: service {#SERVICE.NAME}: uptime'
               type: DEPENDENT
@@ -2431,7 +2515,7 @@ zabbix_export:
                 key: cuc.control.services.raw
               tags:
                 - tag: component
-                  value: service
+                  value: services
                 - tag: scope
                   value: operator
               trigger_prototypes:
@@ -2442,7 +2526,7 @@ zabbix_export:
                   description: 'The service uptime indicates a recent restart. Confirm whether it was planned and correlate with node or application events.'
                   tags:
                     - tag: component
-                      value: service
+                      value: services
           master_item:
             key: cuc.control.services.raw
           preprocessing:
@@ -2469,37 +2553,37 @@ zabbix_export:
       macros:
         - macro: '{$CUC.API.INTERVAL}'
           value: 2m
-          description: 'Polling interval for API health and runtime data.'
+          description: 'Default interval for Unity VMREST health and read-only runtime collection. Use a Zabbix time suffix such as 2m or 5m; shorter values increase Unity web/API load.'
         - macro: '{$CUC.API.PASSWORD}'
           type: SECRET_TEXT
           description: 'Secret web password for the dedicated Unity monitoring user in {$CUC.API.USER}. Override on the host.'
         - macro: '{$CUC.API.TIMEOUT}'
           value: 15s
-          description: 'Timeout for Unity API requests.'
+          description: 'Timeout for one Unity VMREST/CUPI or Serviceability request. Use a Zabbix duration such as 15s or 30s; increase only for slow WAN links or overloaded lab systems.'
         - macro: '{$CUC.API.USER}'
           value: zabbix-monitor
           description: 'Dedicated Unity user without a mailbox. Assign Read Only Administrator for GET-only VMREST/CUPI and Serviceability access; use System Administrator only as a compatibility fallback after a 401, 403, or SOAP authorization fault. Override on the host.'
         - macro: '{$CUC.CERT.DISASTER}'
           value: '7'
-          description: 'High certificate expiry threshold in days.'
+          description: 'DISASTER certificate-expiry boundary in days. Values below 0 mean already expired; default 7 raises the urgent pre-expiry tier for certificates expiring within one week.'
         - macro: '{$CUC.CERT.HIGH}'
           value: '30'
-          description: 'Average certificate expiry threshold in days.'
+          description: 'AVERAGE certificate-expiry boundary in days. Default 30 creates the 7-29 day renewal-planning tier.'
         - macro: '{$CUC.CERT.INFO}'
           value: '90'
-          description: 'Informational certificate expiry threshold in days.'
+          description: 'INFO certificate-expiry boundary in days. Default 90 creates an early renewal notice before the warning tier.'
         - macro: '{$CUC.CERT.URL}'
           value: 'https://cuc.example.invalid'
           description: 'Cisco VOS certificate management base URL; override on the host.'
         - macro: '{$CUC.CERT.WARN}'
           value: '60'
-          description: 'Warning certificate expiry threshold in days.'
+          description: 'WARNING certificate-expiry boundary in days. Default 60 creates the 30-59 day warning tier.'
         - macro: '{$CUC.CPU.HIGH}'
           value: '90'
-          description: 'CPU high threshold in percent.'
+          description: 'HIGH CPU-utilization threshold in percent, evaluated over the sustained trigger window. Raising it reduces sensitivity to CPU pressure reported by PerfMon.'
         - macro: '{$CUC.CPU.WARN}'
           value: '80'
-          description: 'CPU warning threshold in percent.'
+          description: 'WARNING CPU-utilization threshold in percent, evaluated over the sustained trigger window. Lower values detect pressure earlier but may be noisier.'
         - macro: '{$CUC.INTERFACES.NOT_TO_DISCOVER}'
           value: ^$
           description: 'Regex for network interfaces excluded from discovery; ^$ excludes none.'
@@ -2511,16 +2595,16 @@ zabbix_export:
           description: 'Unity Connection FQDN resolved by the Zabbix server or proxy for the independent HTTPS reachability check.'
         - macro: '{$CUC.INVENTORY.INTERVAL}'
           value: 30m
-          description: 'Interval for low-change VMREST capacity and inventory data.'
+          description: 'Polling interval for low-change VMREST inventory counts such as users, ports, port groups, phone systems, nodes, and software version. Default 30m preserves API headroom.'
         - macro: '{$CUC.INVENTORY.TIMEOUT}'
           value: 45s
-          description: 'Timeout for the sequential VMREST inventory collector.'
+          description: 'Timeout for the sequential VMREST inventory collector. It performs several read-only GET requests in one script run; increase only if slow API responses cause unsupported inventory data.'
         - macro: '{$CUC.MEM.HIGH}'
           value: '95'
-          description: 'Memory high threshold in percent.'
+          description: 'HIGH physical-memory utilization threshold in percent, evaluated over the sustained trigger window.'
         - macro: '{$CUC.MEM.WARN}'
           value: '85'
-          description: 'Memory warning threshold in percent.'
+          description: 'WARNING physical-memory utilization threshold in percent, evaluated over the sustained trigger window.'
         - macro: '{$CUC.MESSAGE.QUEUE.WARN}'
           value: '10'
           description: 'Queued-message warning threshold sustained for ten minutes.'
@@ -2544,13 +2628,13 @@ zabbix_export:
           description: 'Regex for partitions excluded from discovery; ^$ excludes none.'
         - macro: '{$CUC.PERFMON.INTERVAL}'
           value: 2m
-          description: 'Platform PerfMon polling interval.'
+          description: 'Polling interval for Cisco Serviceability PerfMon platform and workload collectors. Default 2m balances 5-10 minute fault visibility with API load.'
         - macro: '{$CUC.PORTS.HIGH}'
           value: '95'
-          description: 'Voice-port utilization high threshold in percent.'
+          description: 'HIGH Unity voice-port utilization threshold in percent. It is based on systemwide active voice ports versus configured ports.'
         - macro: '{$CUC.PORTS.WARN}'
           value: '80'
-          description: 'Voice-port utilization warning threshold in percent.'
+          description: 'WARNING Unity voice-port utilization threshold in percent. Lower values provide earlier capacity visibility.'
         - macro: '{$CUC.REPLICATION.EXPECTED}'
           value: '0'
           description: 'Set to 1 only on a Unity Connection cluster node where file replication is configured and expected.'
@@ -2559,22 +2643,22 @@ zabbix_export:
           description: 'File-replication latency warning threshold in seconds, evaluated over 15 minutes when replication is expected.'
         - macro: '{$CUC.SERVICEABILITY.URL}'
           value: 'https://cuc.example.invalid:8443'
-          description: 'Serviceability SOAP base URL, normally HTTPS on port 8443.'
+          description: 'Cisco Serviceability SOAP base URL, normally https://<node>:8443. Used for PerfMon and ControlCenter read-only collectors.'
         - macro: '{$CUC.SERVICES.NOT_TO_DISCOVER}'
           value: ^$
-          description: 'Regex for services excluded from discovery; ^$ excludes none.'
+          description: 'Regular expression for ControlCenter services excluded from discovery. Default ^$ excludes none; use exact, anchored patterns for local noise suppression.'
         - macro: '{$CUC.SWAP.HIGH}'
           value: '50'
-          description: 'Swap high threshold in percent.'
+          description: 'HIGH allocated-swap threshold in percent. Swap alerts also require sustained memory pressure so normal VOS swap allocation is not treated as paging by itself.'
         - macro: '{$CUC.SWAP.MEMORY.MIN}'
           value: '85'
           description: 'Minimum sustained memory utilization required before elevated allocated swap is page-worthy.'
         - macro: '{$CUC.SWAP.WARN}'
           value: '25'
-          description: 'Swap warning threshold in percent.'
+          description: 'WARNING allocated-swap threshold in percent. Swap alerts also require sustained memory pressure.'
         - macro: '{$CUC.TELEPHONY.REQUIRED}'
           value: '1'
-          description: 'Set to 1 when this Unity Connection node must have a phone system, port group, and voice ports.'
+          description: 'Set to 1 when this Unity Connection node is expected to provide telephony service with at least one phone system, port group, and voice port. Set 0 for non-telephony or staged lab nodes.'
         - macro: '{$CUC.URL}'
           value: 'https://cuc.example.invalid'
           description: 'Unity base URL without trailing slash. Override on the host.'

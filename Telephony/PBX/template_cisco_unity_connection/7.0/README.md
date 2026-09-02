@@ -5,7 +5,7 @@
 Monitors Cisco Unity Connection 15 through read-only VMREST/CUPI, Cisco
 Serviceability PerfMon, ControlCenter SOAP, and Cisco VOS Certificate
 Management APIs. The template is exported for Zabbix 7.0 and stores its
-template release as `vendor.name: Zabbix` and `vendor.version: 7.0-1`.
+template release as `vendor.name: Zabbix` and `vendor.version: 7.0-3`.
 
 Maintainer: DevYves89
 
@@ -54,7 +54,8 @@ authentication guide](https://developer.cisco.com/docs/certificate-management/au
   telemetry when exposed by the node, and file-replication latency/rate.
 - ControlCenter service discovery and state.
 - Identity-certificate discovery with UTC expiry, Subject/Issuer CN, full DN,
-  and SAN metadata from the existing PEM snapshot.
+  SAN, Key Usage, and Extended Key Usage metadata from the existing PEM
+  snapshot.
 - Independent HTTPS reachability and an RTMT-inspired operations overview with
   common health/system/workload summary cards and current problems.
 
@@ -65,6 +66,11 @@ Replication alerts remain opt-in through `{$CUC.REPLICATION.EXPECTED}`. The
 three VMREST Container dependents are disabled by default and should be enabled
 only when the raw master proves that the installed CUC release exposes those
 counters.
+
+Latest Data uses the shared Cisco Collaboration tag contract: operator items
+have `scope=operator` and a component such as `api`, `system`, `storage`,
+`network`, `services`, `certificates`, `replication`, or `telephony`; internal
+transport/master payloads use `scope=internal`.
 
 ## Security and limitations
 

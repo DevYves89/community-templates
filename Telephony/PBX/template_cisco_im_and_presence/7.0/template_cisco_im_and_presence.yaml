@@ -7,10 +7,10 @@ zabbix_export:
     - uuid: 77c9e59f51b94db79cc3c780cff96000
       template: 'Cisco IM and Presence 15 by API'
       name: 'Cisco IM and Presence 15 by API'
-      description: 'Cisco IM and Presence 15 (CUP) baseline monitoring through read-only Cisco Serviceability PerfMon and ControlCenter SOAP. It covers API health, CPU, memory, swap, SIP Proxy sessions, Presence Engine sessions/subscriptions, and the critical-service raw snapshot. Operator values use scope=operator; XML/master payloads use scope=internal. Maintainer: DevYves89.'
+      description: 'Cisco IM and Presence 15 (CUP) baseline monitoring through read-only Cisco Serviceability PerfMon, ControlCenter SOAP, and Cisco VOS Certificate Management APIs. It covers API health, CPU, memory, swap, SIP Proxy sessions, Presence Engine sessions/subscriptions, selected critical services, and identity-certificate Latest Data including CN, issuer, SAN, UTC expiry, Key Usage, and Extended Key Usage from the existing PEM snapshot. Operator values use scope=operator; XML/master payloads use scope=internal. Maintainer: DevYves89.'
       vendor:
         name: Zabbix
-        version: 7.0-1
+        version: 7.0-3
       groups:
         - name: Templates/Telephony
       items:
@@ -55,7 +55,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'if(value.indexOf(''soapGetServiceStatusResponse'')<0||value.indexOf(''Fault'')>=0)throw ''invalid API response'';return 1;'
+                - 'return value.indexOf(''soapGetServiceStatusResponse'')>=0&&value.indexOf(''Fault'')<0?1:0;'
           master_item:
             key: cup.control.services.raw
           tags:
@@ -88,7 +88,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'if(value.indexOf(''Processor'')<0||value.indexOf(''Fault'')>=0)throw ''invalid API response'';return 1;'
+                - 'return value.indexOf(''Processor'')>=0&&value.indexOf(''Fault'')<0?1:0;'
           master_item:
             key: cup.perfmon.processor.raw
           tags:
@@ -169,7 +169,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Processor(_Total)\\% CPU Time");if(p<0)throw "counter absent";p=value.indexOf("Value>",p);if(p<0)throw "value absent";p+=6;var e=value.indexOf("<",p),n=Number(value.slice(p,e));if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var m=/<[^>]*Name>[^<]*Processor\(_Total\)\\% CPU Time<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cup.perfmon.processor.raw
           tags:
@@ -179,7 +179,7 @@ zabbix_export:
               value: operator
           triggers:
             - uuid: 77c9e59f51b94db79cc3c780cff96003
-              expression: 'min(/Cisco IM and Presence 15 by API/cup.cpu.util,10m)>{$CUP.CPU.WARN} and min(/Cisco IM and Presence 15 by API/cup.cpu.util,10m)<={$CUP.CPU.HIGH}'
+              expression: 'min(/Cisco IM and Presence 15 by API/cup.cpu.util,10m)>={$CUP.CPU.WARN} and min(/Cisco IM and Presence 15 by API/cup.cpu.util,10m)<{$CUP.CPU.HIGH}'
               name: 'CUP: CPU utilization is elevated'
               priority: WARNING
               description: 'Review VOS resource pressure and concurrent IM&P load.'
@@ -187,7 +187,7 @@ zabbix_export:
                 - tag: component
                   value: cpu
             - uuid: 77c9e59f51b94db79cc3c780cff96004
-              expression: 'min(/Cisco IM and Presence 15 by API/cup.cpu.util,10m)>{$CUP.CPU.HIGH}'
+              expression: 'min(/Cisco IM and Presence 15 by API/cup.cpu.util,10m)>={$CUP.CPU.HIGH}'
               name: 'CUP: CPU utilization is high'
               priority: HIGH
               description: 'Sustained CPU pressure can affect presence and XMPP connectivity.'
@@ -206,7 +206,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Memory\\Free KBytes");if(p<0)throw "counter absent";p=value.indexOf("Value>",p);if(p<0)throw "value absent";p+=6;var e=value.indexOf("<",p),n=Number(value.slice(p,e));if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var m=/<[^>]*Name>[^<]*Memory\\Free KBytes<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
             - type: MULTIPLIER
               parameters:
                 - '1024'
@@ -229,7 +229,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Memory\\Total KBytes");if(p<0)throw "counter absent";p=value.indexOf("Value>",p);if(p<0)throw "value absent";p+=6;var e=value.indexOf("<",p),n=Number(value.slice(p,e));if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var m=/<[^>]*Name>[^<]*Memory\\Total KBytes<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
             - type: MULTIPLIER
               parameters:
                 - '1024'
@@ -252,7 +252,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("% Mem Used");if(p<0)throw "counter absent";p=value.indexOf("Value>",p);if(p<0)throw "value absent";p+=6;var e=value.indexOf("<",p),n=Number(value.slice(p,e));if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var m=/<[^>]*Name>[^<]*Memory\\% Mem Used<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cup.perfmon.memory.raw
           tags:
@@ -262,7 +262,7 @@ zabbix_export:
               value: operator
           triggers:
             - uuid: 3e64a47176884bbb9cc027cb3eb0bdaa
-              expression: 'min(/Cisco IM and Presence 15 by API/cup.memory.util,10m)>{$CUP.MEM.WARN} and min(/Cisco IM and Presence 15 by API/cup.memory.util,10m)<={$CUP.MEM.HIGH}'
+              expression: 'min(/Cisco IM and Presence 15 by API/cup.memory.util,10m)>={$CUP.MEM.WARN} and min(/Cisco IM and Presence 15 by API/cup.memory.util,10m)<{$CUP.MEM.HIGH}'
               name: 'CUP: memory utilization is elevated'
               priority: WARNING
               description: 'Review VOS memory pressure before changing services.'
@@ -270,7 +270,7 @@ zabbix_export:
                 - tag: component
                   value: memory
             - uuid: 7bbecea484f74a8fa068e4babb4d7793
-              expression: 'min(/Cisco IM and Presence 15 by API/cup.memory.util,10m)>{$CUP.MEM.HIGH}'
+              expression: 'min(/Cisco IM and Presence 15 by API/cup.memory.util,10m)>={$CUP.MEM.HIGH}'
               name: 'CUP: memory utilization is high'
               priority: HIGH
               description: 'Sustained memory pressure can affect presence and XMPP connectivity.'
@@ -497,7 +497,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Cisco Presence Engine\\ActiveIMSessions");if(p<0)throw "counter absent";p=value.indexOf("Value>",p);if(p<0)throw "value absent";p+=6;var e=value.indexOf("<",p),n=Number(value.slice(p,e));if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var m=/<[^>]*Name>[^<]*Cisco Presence Engine\\ActiveIMSessions<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cup.perfmon.presence.raw
           tags:
@@ -517,7 +517,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Cisco Presence Engine\\NotificationsInQueue");if(p<0)throw "counter absent";p=value.indexOf("Value>",p);if(p<0)throw "value absent";p+=6;var e=value.indexOf("<",p),n=Number(value.slice(p,e));if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var m=/<[^>]*Name>[^<]*Cisco Presence Engine\\NotificationsInQueue<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cup.perfmon.presence.raw
           tags:
@@ -546,7 +546,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Cisco Presence Engine\\ActiveSubscriptions");if(p<0)throw "counter absent";p=value.indexOf("Value>",p);if(p<0)throw "value absent";p+=6;var e=value.indexOf("<",p),n=Number(value.slice(p,e));if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var m=/<[^>]*Name>[^<]*Cisco Presence Engine\\ActiveSubscriptions<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cup.perfmon.presence.raw
           tags:
@@ -566,7 +566,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Cisco SIP Proxy\\IMCTRLActiveSessions");if(p<0)throw "counter absent";p=value.indexOf("Value>",p);if(p<0)throw "value absent";p+=6;var e=value.indexOf("<",p),n=Number(value.slice(p,e));if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var m=/<[^>]*Name>[^<]*Cisco SIP Proxy\\IMCTRLActiveSessions<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cup.perfmon.sip_proxy.raw
           tags:
@@ -586,7 +586,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Cisco SIP Proxy\\IMGWActiveSessions");if(p<0)throw "counter absent";p=value.indexOf("Value>",p);if(p<0)throw "value absent";p+=6;var e=value.indexOf("<",p),n=Number(value.slice(p,e));if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var m=/<[^>]*Name>[^<]*Cisco SIP Proxy\\IMGWActiveSessions<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cup.perfmon.sip_proxy.raw
           tags:
@@ -603,7 +603,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("IMCTRLActiveSessions"),r;if(p<0)throw "counter absent";r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);'
+                - 'var m=/<[^>]*Name>[^<]*Cisco SIP Proxy\\IMCTRLActiveSessions<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";return Number(r[1]);'
           master_item:
             key: cup.perfmon.sip_proxy.raw
           tags:
@@ -622,7 +622,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Total Swap KBytes"),r;if(p<0)throw "counter absent";r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1])*1024;'
+                - 'var m=/<[^>]*Name>[^<]*Memory\\Total Swap KBytes<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";return Number(r[1])*1024;'
           master_item:
             key: cup.perfmon.memory.raw
           tags:
@@ -641,7 +641,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Used Swap KBytes"),r;if(p<0)throw "counter absent";r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1])*1024;'
+                - 'var m=/<[^>]*Name>[^<]*Memory\\Used Swap KBytes<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";return Number(r[1])*1024;'
           master_item:
             key: cup.perfmon.memory.raw
           tags:
@@ -661,7 +661,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'function c(n){var p=value.indexOf(n),r;if(p<0)throw "counter absent: "+n;r=/<[^>]*Value>\s*([^<]+)/.exec(value.slice(p));if(!r)throw "value absent";return Number(r[1]);}var t=c("Total Swap KBytes"),u=c("Used Swap KBytes");if(t<=0||u<0||u>t)throw "invalid swap";return u*100/t;'
+                - 'function c(n){var p=value.indexOf(n),b,r,q;if(p<0)throw "counter absent: "+n;b=value.slice(p+n.length);q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable: "+n;return Number(r[1]);}var t=c("Total Swap KBytes"),u=c("Used Swap KBytes");if(t<=0||u<0||u>t)throw "invalid swap";return u*100/t;'
           master_item:
             key: cup.perfmon.memory.raw
           tags:
@@ -671,7 +671,7 @@ zabbix_export:
               value: operator
           triggers:
             - uuid: f38017cc18bc49468dad6b9c21f51ff8
-              expression: 'min(/Cisco IM and Presence 15 by API/cup.swap.util,10m)>{$CUP.SWAP.WARN} and min(/Cisco IM and Presence 15 by API/cup.swap.util,10m)<={$CUP.SWAP.HIGH}'
+              expression: 'min(/Cisco IM and Presence 15 by API/cup.swap.util,10m)>={$CUP.SWAP.WARN} and min(/Cisco IM and Presence 15 by API/cup.swap.util,10m)<{$CUP.SWAP.HIGH}'
               name: 'CUP: swap utilization is elevated'
               priority: WARNING
               description: 'Review sustained VOS memory pressure before changing services.'
@@ -679,7 +679,7 @@ zabbix_export:
                 - tag: component
                   value: memory
             - uuid: 77ba3878056142bea69ca1e55a0a87db
-              expression: 'min(/Cisco IM and Presence 15 by API/cup.swap.util,10m)>{$CUP.SWAP.HIGH}'
+              expression: 'min(/Cisco IM and Presence 15 by API/cup.swap.util,10m)>={$CUP.SWAP.HIGH}'
               name: 'CUP: swap utilization is high'
               priority: HIGH
               description: 'Sustained swap pressure can affect SIP, presence, and XMPP processing.'
@@ -698,7 +698,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("System\\IOPerSecond");if(p<0)throw "counter absent";p=value.indexOf("Value>",p);if(p<0)throw "value absent";p+=6;var e=value.indexOf("<",p),n=Number(value.slice(p,e));if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var m=/<[^>]*Name>[^<]*System\\IOPerSecond<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cup.perfmon.system.raw
           tags:
@@ -718,7 +718,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("System\\Total Processes");if(p<0)throw "counter absent";p=value.indexOf("Value>",p);if(p<0)throw "value absent";p+=6;var e=value.indexOf("<",p),n=Number(value.slice(p,e));if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var m=/<[^>]*Name>[^<]*System\\Total Processes<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cup.perfmon.system.raw
           tags:
@@ -738,7 +738,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("System\\Total Threads");if(p<0)throw "counter absent";p=value.indexOf("Value>",p);if(p<0)throw "value absent";p+=6;var e=value.indexOf("<",p),n=Number(value.slice(p,e));if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var m=/<[^>]*Name>[^<]*System\\Total Threads<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cup.perfmon.system.raw
           tags:
@@ -855,7 +855,7 @@ zabbix_export:
           preprocessing:
             - type: JAVASCRIPT
               parameters:
-                - 'var p=value.indexOf("Cisco XCP CM\\CmConnectedSockets");if(p<0)throw "counter absent";p=value.indexOf("Value>",p);if(p<0)throw "value absent";p+=6;var e=value.indexOf("<",p),n=Number(value.slice(p,e));if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
+                - 'var m=/<[^>]*Name>[^<]*Cisco XCP CM\\CmConnectedSockets<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";var n=Number(r[1]);if(!isFinite(n)||n<0)throw "counter value invalid";return n;'
           master_item:
             key: cup.perfmon.xcp_cm.raw
           tags:
@@ -881,12 +881,12 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x)throw ''certificate absent'';var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++){if(a[i].indexOf(''---'')!==0&&a[i].length)s+=new TextDecoder().decode(atob(a[i]));}var m=s.match(/(\d{12})[\s\S]*(\d{12})/);if(!m)throw ''expiry not found'';var z=m[2],y=2000+Number(z.slice(0,2)),mo=Number(z.slice(2,4))-1,da=Number(z.slice(4,6)),h=Number(z.slice(6,8)),mi=Number(z.slice(8,10)),se=Number(z.slice(10,12));return Math.floor((Date.UTC(y,mo,da,h,mi,se)-Date.now())/86400000);'
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x)throw ''certificate absent'';var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++){if(a[i].indexOf(''---'')!==0&&a[i].length){var z=atob(a[i]);for(var h=0;h<z.length;h++)s+=String.fromCharCode(typeof z[h]===''number''?z[h]:z.charCodeAt(h));}}var m=s.match(/(\d{12})[\s\S]*(\d{12})/);if(!m)throw ''expiry not found'';var z=m[2],y=2000+Number(z.slice(0,2)),mo=Number(z.slice(2,4))-1,da=Number(z.slice(4,6)),h=Number(z.slice(6,8)),mi=Number(z.slice(8,10)),se=Number(z.slice(10,12));return Math.floor((Date.UTC(y,mo,da,h,mi,se)-Date.now())/86400000);'
               master_item:
                 key: cup.certificate.snapshot.raw
               tags:
                 - tag: component
-                  value: certificate
+                  value: certificates
                 - tag: scope
                   value: operator
               trigger_prototypes:
@@ -897,7 +897,7 @@ zabbix_export:
                   description: 'Renew or replace the identified Cisco VOS certificate and validate affected CUP services before expiry.'
                   tags:
                     - tag: component
-                      value: certificate
+                      value: certificates
                 - uuid: cd0542268887480f80dc3a7ad2d51322
                   expression: 'last(/Cisco IM and Presence 15 by API/cup.certificate.days[{#CERT.NAME}])<{$CUP.CERT.DISASTER} and last(/Cisco IM and Presence 15 by API/cup.certificate.days[{#CERT.NAME}])>=0'
                   name: 'CUP certificate {#CERT.NAME} expires within 7 days'
@@ -905,7 +905,7 @@ zabbix_export:
                   description: 'Renew or replace the identified Cisco VOS certificate and validate affected CUP services before expiry.'
                   tags:
                     - tag: component
-                      value: certificate
+                      value: certificates
                 - uuid: f980fab2388144d8bb14566e8323f81d
                   expression: 'last(/Cisco IM and Presence 15 by API/cup.certificate.days[{#CERT.NAME}])<{$CUP.CERT.HIGH} and last(/Cisco IM and Presence 15 by API/cup.certificate.days[{#CERT.NAME}])>={$CUP.CERT.DISASTER}'
                   name: 'CUP certificate {#CERT.NAME} expires within 30 days'
@@ -913,7 +913,7 @@ zabbix_export:
                   description: 'Renew or replace the identified Cisco VOS certificate and validate affected CUP services before expiry.'
                   tags:
                     - tag: component
-                      value: certificate
+                      value: certificates
                 - uuid: 3975440080da4bafbe0c45bbccf7ef54
                   expression: 'last(/Cisco IM and Presence 15 by API/cup.certificate.days[{#CERT.NAME}])<{$CUP.CERT.INFO} and last(/Cisco IM and Presence 15 by API/cup.certificate.days[{#CERT.NAME}])>={$CUP.CERT.WARN}'
                   name: 'CUP certificate {#CERT.NAME} expires within 90 days'
@@ -921,7 +921,7 @@ zabbix_export:
                   description: 'Renew or replace the identified Cisco VOS certificate and validate affected CUP services before expiry.'
                   tags:
                     - tag: component
-                      value: certificate
+                      value: certificates
                 - uuid: 57e8ba118699459086fa11fdd9a45ce3
                   expression: 'last(/Cisco IM and Presence 15 by API/cup.certificate.days[{#CERT.NAME}])<0'
                   name: 'CUP certificate {#CERT.NAME} has expired'
@@ -929,7 +929,7 @@ zabbix_export:
                   description: 'Renew or replace the identified Cisco VOS certificate and validate affected CUP services before expiry.'
                   tags:
                     - tag: component
-                      value: certificate
+                      value: certificates
             - uuid: fd6191bb3cf845118662a2532c6521f9
               name: 'CUP certificate {#CERT.NAME}: issuer common name'
               type: DEPENDENT
@@ -941,12 +941,12 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++)if(a[i].indexOf(''---'')!==0&&a[i].length)s+=a[i];var z=atob(s),b='''';for(var h=0;h<z.length;h++)b+=String.fromCharCode(z[h]);var oid=String.fromCharCode(85,4,3),want=1,count=0;function len(p){var n=b.charCodeAt(p),q=p+1,w;if(n&128){w=n&127;n=0;while(w--)n=n*256+b.charCodeAt(q++);}return {v:n,p:q};}for(var p=0;p<=b.length-3;p++){if(b.slice(p,p+3)!==oid)continue;if(count++!==want)continue;var q=p+3,t=b.charCodeAt(q),l=len(q+1),v;if(l.p+l.v>b.length)break;if(t===12||t===19||t===20||t===22||t===30){var e=l.p+l.v;v=b.slice(l.p,e);if(t===30){v='''';for(var j=l.p;j<e;j+=2)v+=String.fromCharCode(b.charCodeAt(j)*256+b.charCodeAt(j+1));}if(v)return v;}}throw ''common name absent'';'
+                    - 'var m=/(?:^|,\s*)CN=([^,]+)/.exec(value);if(!m||!m[1])throw ''issuer CN absent'';return m[1];'
               master_item:
-                key: cup.certificate.snapshot.raw
+                key: 'cup.certificate.issuer[{#CERT.NAME}]'
               tags:
                 - tag: component
-                  value: certificate
+                  value: certificates
                 - tag: scope
                   value: operator
             - uuid: 0d701a61b78843a4ba31295c749909e6
@@ -960,12 +960,12 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x)throw ''certificate absent'';var s='''',a=x.certificate.split(''\n'');for(var i=0;i<a.length;i++)if(a[i].indexOf(''---'')!==0&&a[i].length)s+=a[i];var b=atob(s);function t(p){var q=p+1,n=b[q++];if(n&128){var z=n&127;n=0;while(z--)n=n*256+b[q++];}return {t:b[p],v:q,e:q+n};}function o(n){var q=n.v,v=b[q++],r=v<40?0:Math.floor(v/40),z=v<40?v: v-r*40,a=[r,z];while(q<n.e){v=0;do{z=b[q++];v=v*128+(z&127);}while(z&128);a.push(v);}return a.join(''.'');}function v(n){var s='''';for(var q=n.v;q<n.e;q++)s+=String.fromCharCode(b[q]);return s;}function name(n){var q=n.v,a=[];while(q<n.e){var r=t(q);q=r.e;var p=r.v;while(p<r.e){var e=t(p);p=e.e;var k=t(e.v),w=t(k.e),m={''2.5.4.3'':''CN'',''2.5.4.6'':''C'',''2.5.4.7'':''L'',''2.5.4.8'':''ST'',''2.5.4.10'':''O'',''2.5.4.11'':''OU''};a.push((m[o(k)]||o(k))+''=''+v(w));}}return a.join('', '');}var c=t(0),q=t(c.v),p=q.v,e=t(p);if(e.t===160)p=e.e;p=t(p).e;p=t(p).e;return name(t(p));'
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x)throw ''certificate absent'';var s='''',a=x.certificate.split(''\n'');for(var i=0;i<a.length;i++)if(a[i].indexOf(''---'')!==0&&a[i].length)s+=a[i];var z=atob(s),b=[];for(var h=0;h<z.length;h++)b.push(typeof z[h]===''number''?z[h]:z.charCodeAt(h));function t(p){var q=p+1,n=b[q++];if(n&128){var z=n&127;n=0;while(z--)n=n*256+b[q++];}return {t:b[p],v:q,e:q+n};}function o(n){var q=n.v,v=b[q++],r=v<40?0:Math.floor(v/40),z=v<40?v: v-r*40,a=[r,z];while(q<n.e){v=0;do{z=b[q++];v=v*128+(z&127);}while(z&128);a.push(v);}return a.join(''.'');}function v(n){var s='''';for(var q=n.v;q<n.e;q++)s+=String.fromCharCode(b[q]);return s;}function name(n){var q=n.v,a=[];while(q<n.e){var r=t(q);q=r.e;var p=r.v;while(p<r.e){var e=t(p);p=e.e;var k=t(e.v),w=t(k.e),m={''2.5.4.3'':''CN'',''2.5.4.6'':''C'',''2.5.4.7'':''L'',''2.5.4.8'':''ST'',''2.5.4.10'':''O'',''2.5.4.11'':''OU''};a.push((m[o(k)]||o(k))+''=''+v(w));}}return a.join('', '');}var c=t(0),q=t(c.v),p=q.v,e=t(p);if(e.t===160)p=e.e;p=t(p).e;p=t(p).e;return name(t(p));'
               master_item:
                 key: cup.certificate.snapshot.raw
               tags:
                 - tag: component
-                  value: certificate
+                  value: certificates
                 - tag: scope
                   value: operator
             - uuid: c1f492928ddc423f99f12282c0d6b6fa
@@ -979,12 +979,12 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++){if(a[i].indexOf(''---'')!==0&&a[i].length)s+=new TextDecoder().decode(atob(a[i]));}var m=s.match(/(\d{12})[\s\S]*(\d{12})/);if(!m)throw ''expiry absent'';var z=m[2],y=2000+Number(z.slice(0,2)),mo=Number(z.slice(2,4)),da=Number(z.slice(4,6)),h=Number(z.slice(6,8)),mi=Number(z.slice(8,10)),se=Number(z.slice(10,12));if(mo<1||mo>12||da<1||da>31||h>23||mi>59||se>59)throw ''invalid expiry'';function p(n){return (''0''+n).slice(-2);}return [y,p(mo),p(da)].join(''-'')+''T''+[p(h),p(mi),p(se)].join('':'')+''Z'';'
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++){if(a[i].indexOf(''---'')!==0&&a[i].length){var z=atob(a[i]);for(var h=0;h<z.length;h++)s+=String.fromCharCode(typeof z[h]===''number''?z[h]:z.charCodeAt(h));}}var m=s.match(/(\d{12})[\s\S]*(\d{12})/);if(!m)throw ''expiry absent'';var z=m[2],y=2000+Number(z.slice(0,2)),mo=Number(z.slice(2,4)),da=Number(z.slice(4,6)),h=Number(z.slice(6,8)),mi=Number(z.slice(8,10)),se=Number(z.slice(10,12));if(mo<1||mo>12||da<1||da>31||h>23||mi>59||se>59)throw ''invalid expiry'';function p(n){return (''0''+n).slice(-2);}return [y,p(mo),p(da)].join(''-'')+''T''+[p(h),p(mi),p(se)].join('':'')+''Z'';'
               master_item:
                 key: cup.certificate.snapshot.raw
               tags:
                 - tag: component
-                  value: certificate
+                  value: certificates
                 - tag: scope
                   value: operator
             - uuid: 31610105e3ee4d1a9b8946fe43f0abb7
@@ -998,14 +998,88 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var pem=x.certificate;if(!/^-----BEGIN CERTIFICATE-----\s*[\s\S]*\s*-----END CERTIFICATE-----\s*$/.test(pem))throw ''invalid PEM framing'';var p=pem.replace(/-----[^-]+-----|\s/g,'''');if(!p)throw ''PEM absent'';var z=atob(p),b='''';for(var h=0;h<z.length;h++)b+=String.fromCharCode(z[h]);var n=b.length;function B(q){return b.charCodeAt(q);}function r(q){if(q+2>n)throw ''truncated DER'';var t=B(q++),l=B(q++),u;if(l&128){u=l&127;if(!u||u>4||q+u>n)throw ''invalid DER length'';l=0;while(u--)l=l*256+B(q++);}if(q+l>n)throw ''truncated DER'';return {t:t,v:q,e:q+l,n:q+l};}function txt(a){return b.slice(a.v,a.e);}function ip(a){var q=a.v,o=[];if(a.e-q===4){for(;q<a.e;q++)o.push(B(q));return o.join(''.'');}if(a.e-q!==16)throw ''invalid SAN IP'';for(var i=0;i<8;i++,q+=2)o.push((B(q)*256+B(q+1)).toString(16));return o.join('':'');}var top=r(0);if(top.t!==48||top.e!==n)throw ''invalid certificate DER'';var tbs=r(top.v);if(tbs.t!==48||tbs.e>top.e)throw ''invalid TBSCertificate'';var sigalg=r(tbs.n),sigval=r(sigalg.n);if(sigalg.t!==48||sigval.t!==3||sigval.n!==top.e||sigval.e-sigval.v<2)throw ''invalid certificate signature structure'';var algoid=r(sigalg.v);if(algoid.t!==6)throw ''invalid signature algorithm'';if(algoid.n<sigalg.e&&r(algoid.n).n!==sigalg.e)throw ''invalid signature parameters'';var unused=B(sigval.v);if(unused>7||(unused&&((B(sigval.e-1)&((1<<unused)-1))!==0)))throw ''invalid signature bit string'';var q=tbs.v,a=r(q);if(a.t===160){q=a.n;a=r(q);}q=a.n;for(var skip=0;skip<5;skip++){a=r(q);q=a.n;}var ext=null;while(q<tbs.e){a=r(q);q=a.n;if(a.t===163){if(ext)throw ''duplicate extensions'';ext=a;}}if(!ext)return ''No SAN extension'';var seq=r(ext.v);if(seq.t!==48||seq.e!==ext.e)throw ''invalid extensions'';var sanv=null;for(q=seq.v;q<seq.e;){var one=r(q);q=one.n;if(one.t!==48)throw ''invalid extension'';var e=r(one.v);if(e.t!==6)throw ''extension OID absent'';var san=e.e-e.v===3&&B(e.v)===85&&B(e.v+1)===29&&B(e.v+2)===17;var v=r(e.n);if(v.t===1)v=r(v.n);if(v.t!==4||v.n!==one.e)throw ''invalid extension value'';if(san){if(sanv)throw ''duplicate SAN extension'';sanv=v;}}if(!sanv)return ''No SAN extension'';var names=r(sanv.v);if(names.t!==48||names.e!==sanv.e)throw ''invalid SAN sequence'';var out=[];for(var j=names.v;j<names.e;){var g=r(j);j=g.n;if(g.t===130)out.push(''DNS:''+txt(g));else if(g.t===135)out.push(''IP:''+ip(g));else if(g.t===134)out.push(''URI:''+txt(g));else if(g.t===129)out.push(''RFC822:''+txt(g));}return out.length?out.join('', ''):''No SAN extension'';'
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var pem=x.certificate;if(!/^-----BEGIN CERTIFICATE-----\s*[\s\S]*\s*-----END CERTIFICATE-----\s*$/.test(pem))throw ''invalid PEM framing'';var p=pem.replace(/-----[^-]+-----|\s/g,'''');if(!p)throw ''PEM absent'';var z=atob(p),b='''';for(var h=0;h<z.length;h++)b+=String.fromCharCode(typeof z[h]===''number''?z[h]:z.charCodeAt(h));var n=b.length;function B(q){return b.charCodeAt(q);}function r(q){if(q+2>n)throw ''truncated DER'';var t=B(q++),l=B(q++),u;if(l&128){u=l&127;if(!u||u>4||q+u>n)throw ''invalid DER length'';l=0;while(u--)l=l*256+B(q++);}if(q+l>n)throw ''truncated DER'';return {t:t,v:q,e:q+l,n:q+l};}function txt(a){return b.slice(a.v,a.e);}function ip(a){var q=a.v,o=[];if(a.e-q===4){for(;q<a.e;q++)o.push(B(q));return o.join(''.'');}if(a.e-q!==16)throw ''invalid SAN IP'';for(var i=0;i<8;i++,q+=2)o.push((B(q)*256+B(q+1)).toString(16));return o.join('':'');}var top=r(0);if(top.t!==48||top.e!==n)throw ''invalid certificate DER'';var tbs=r(top.v);if(tbs.t!==48||tbs.e>top.e)throw ''invalid TBSCertificate'';var sigalg=r(tbs.n),sigval=r(sigalg.n);if(sigalg.t!==48||sigval.t!==3||sigval.n!==top.e||sigval.e-sigval.v<2)throw ''invalid certificate signature structure'';var algoid=r(sigalg.v);if(algoid.t!==6)throw ''invalid signature algorithm'';if(algoid.n<sigalg.e&&r(algoid.n).n!==sigalg.e)throw ''invalid signature parameters'';var unused=B(sigval.v);if(unused>7||(unused&&((B(sigval.e-1)&((1<<unused)-1))!==0)))throw ''invalid signature bit string'';var q=tbs.v,a=r(q);if(a.t===160){q=a.n;a=r(q);}q=a.n;for(var skip=0;skip<5;skip++){a=r(q);q=a.n;}var ext=null;while(q<tbs.e){a=r(q);q=a.n;if(a.t===163){if(ext)throw ''duplicate extensions'';ext=a;}}if(!ext)return ''No SAN extension'';var seq=r(ext.v);if(seq.t!==48||seq.e!==ext.e)throw ''invalid extensions'';var sanv=null;for(q=seq.v;q<seq.e;){var one=r(q);q=one.n;if(one.t!==48)throw ''invalid extension'';var e=r(one.v);if(e.t!==6)throw ''extension OID absent'';var san=e.e-e.v===3&&B(e.v)===85&&B(e.v+1)===29&&B(e.v+2)===17;var v=r(e.n);if(v.t===1)v=r(v.n);if(v.t!==4||v.n!==one.e)throw ''invalid extension value'';if(san){if(sanv)throw ''duplicate SAN extension'';sanv=v;}}if(!sanv)return ''No SAN extension'';var names=r(sanv.v);if(names.t!==48||names.e!==sanv.e)throw ''invalid SAN sequence'';var out=[];for(var j=names.v;j<names.e;){var g=r(j);j=g.n;if(g.t===130)out.push(''DNS:''+txt(g));else if(g.t===135)out.push(''IP:''+ip(g));else if(g.t===134)out.push(''URI:''+txt(g));else if(g.t===129)out.push(''RFC822:''+txt(g));}return out.length?out.join('', ''):''No SAN extension'';'
               master_item:
                 key: cup.certificate.snapshot.raw
               tags:
                 - tag: component
-                  value: certificate
+                  value: certificates
                 - tag: scope
                   value: operator
+            - uuid: 6d2a4e5af4bc4abcb58779a58f8c9f01
+              name: 'CUP internal: certificate {#CERT.NAME} usage extensions raw/master'
+              type: DEPENDENT
+              key: 'cup.certificate.usages.raw[{#CERT.NAME}]'
+              delay: '0'
+              history: 1d
+              value_type: TEXT
+              trends: '0'
+              description: 'Internal parsed master for the operator-facing Key Usage and Extended Key Usage items. It decodes both X.509 extensions once from the existing PEM snapshot and adds no Certificate Management request.'
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var pem=x.certificate;if(!/^-----BEGIN CERTIFICATE-----\s*[\s\S]*\s*-----END CERTIFICATE-----\s*$/.test(pem))throw ''invalid PEM framing'';var p=pem.replace(/-----[^-]+-----|\s/g,'''');if(!p)throw ''PEM absent'';var z=atob(p),b='''';for(var h=0;h<z.length;h++)b+=String.fromCharCode(typeof z[h]===''number''?z[h]:z.charCodeAt(h));var n=b.length;function B(q){return b.charCodeAt(q);}function r(q){if(q+2>n)throw ''truncated DER'';var t=B(q++),l=B(q++),u;if(l&128){u=l&127;if(!u||u>4||q+u>n)throw ''invalid DER length'';l=0;while(u--)l=l*256+B(q++);}if(q+l>n)throw ''truncated DER'';return {t:t,v:q,e:q+l,n:q+l};}function O(a){if(a.t!==6||a.v>=a.e)throw ''invalid extension OID'';var q=a.v,v=0,z,out=[];do{z=B(q++);v=v*128+(z&127);if(q>a.e)throw ''invalid extension OID'';}while(z&128);if(v<40)out=[0,v];else if(v<80)out=[1,v-40];else out=[2,v-80];while(q<a.e){v=0;do{z=B(q++);v=v*128+(z&127);if(q>a.e)throw ''invalid extension OID'';}while(z&128);out.push(v);}return out.join(''.'');}var top=r(0);if(top.t!==48||top.e!==n)throw ''invalid certificate DER'';var tbs=r(top.v);if(tbs.t!==48||tbs.e>top.e)throw ''invalid TBSCertificate'';var q=tbs.v,a=r(q);if(a.t===160){q=a.n;a=r(q);}q=a.n;for(var skip=0;skip<5;skip++){a=r(q);q=a.n;}var extNode=null;while(q<tbs.e){a=r(q);q=a.n;if(a.t===163){if(extNode)throw ''duplicate extensions'';extNode=a;}}var ext={};if(extNode){var seq=r(extNode.v);if(seq.t!==48||seq.e!==extNode.e)throw ''invalid extensions'';for(q=seq.v;q<seq.e;){var one=r(q);q=one.n;if(one.t!==48)throw ''invalid extension'';var oidNode=r(one.v),id=O(oidNode),pos=oidNode.n,field=r(pos);if(field.t===1){pos=field.n;field=r(pos);}if(field.t!==4||field.n!==one.e)throw ''invalid extension value'';if(ext[id])throw ''duplicate extension ''+id;ext[id]=field;}}function keyUsage(){var oct=ext[''2.5.29.15''];if(!oct)return ''No Key Usage extension'';var bits=r(oct.v);if(bits.t!==3||bits.n!==oct.e||bits.e-bits.v<2)throw ''invalid Key Usage'';var unused=B(bits.v),start=bits.v+1;if(unused>7||(unused&&((B(bits.e-1)&((1<<unused)-1))!==0)))throw ''invalid Key Usage bits'';var total=(bits.e-start)*8-unused,names=[''Digital signature'',''Content commitment'',''Key encipherment'',''Data encipherment'',''Key agreement'',''Certificate signing'',''CRL signing'',''Encipher only'',''Decipher only''],out=[];for(var i=0;i<names.length&&i<total;i++)if(B(start+Math.floor(i/8))&(128>>(i%8)))out.push(names[i]);if(!out.length)throw ''empty Key Usage'';return out.join('', '');}function extendedKeyUsage(){var oct=ext[''2.5.29.37''];if(!oct)return ''No Extended Key Usage extension'';var seq=r(oct.v);if(seq.t!==48||seq.n!==oct.e)throw ''invalid Extended Key Usage'';var names={''2.5.29.37.0'':''Any extended key usage'',''1.3.6.1.5.5.7.3.1'':''TLS web server authentication'',''1.3.6.1.5.5.7.3.2'':''TLS web client authentication'',''1.3.6.1.5.5.7.3.3'':''Code signing'',''1.3.6.1.5.5.7.3.4'':''Email protection'',''1.3.6.1.5.5.7.3.5'':''IPsec end system'',''1.3.6.1.5.5.7.3.6'':''IPsec tunnel'',''1.3.6.1.5.5.7.3.7'':''IPsec user'',''1.3.6.1.5.5.7.3.8'':''Time stamping'',''1.3.6.1.5.5.7.3.9'':''OCSP signing'',''1.3.6.1.4.1.311.20.2.2'':''Smart card logon''},out=[];for(var q=seq.v;q<seq.e;){var oid=O(r(q));q=r(q).n;out.push(names[oid]||(''OID ''+oid));}if(!out.length)throw ''empty Extended Key Usage'';return out.join('', '');}return JSON.stringify({key_usage:keyUsage(),extended_key_usage:extendedKeyUsage()});'
+              master_item:
+                key: cup.certificate.snapshot.raw
+              tags:
+                - tag: certificate
+                  value: '{#CERT.NAME}'
+                - tag: component
+                  value: certificates
+                - tag: scope
+                  value: internal
+                - tag: source
+                  value: certificate-management
+            - uuid: 6d2a4e5af4bc4abcb58779a58f8c9f02
+              name: 'CUP certificate {#CERT.NAME}: key usage'
+              type: DEPENDENT
+              key: 'cup.certificate.key_usage[{#CERT.NAME}]'
+              tags:
+                - tag: component
+                  value: certificates
+                - tag: certificate
+                  value: '{#CERT.NAME}'
+                - tag: metric
+                  value: usage
+                - tag: scope
+                  value: operator
+                - tag: source
+                  value: certificate-management
+              delay: '0'
+              value_type: TEXT
+              trends: '0'
+              description: 'User-friendly X.509 Key Usage names derived from the existing PEM snapshot. A valid certificate without the extension reports No Key Usage extension; malformed DER fails closed.'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.key_usage
+              master_item:
+                key: 'cup.certificate.usages.raw[{#CERT.NAME}]'
+            - uuid: 6d2a4e5af4bc4abcb58779a58f8c9f03
+              name: 'CUP certificate {#CERT.NAME}: extended key usage'
+              type: DEPENDENT
+              key: 'cup.certificate.extended_key_usage[{#CERT.NAME}]'
+              tags:
+                - tag: component
+                  value: certificates
+                - tag: certificate
+                  value: '{#CERT.NAME}'
+                - tag: metric
+                  value: usage
+                - tag: scope
+                  value: operator
+                - tag: source
+                  value: certificate-management
+              delay: '0'
+              value_type: TEXT
+              trends: '0'
+              description: 'User-friendly X.509 Extended Key Usage names derived from the existing PEM snapshot. Common TLS, signing, email, IPsec, time-stamping, OCSP, and smart-card purposes are named; unknown purposes remain visible as OIDs. A valid certificate without the extension reports No Extended Key Usage extension.'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.extended_key_usage
+              master_item:
+                key: 'cup.certificate.usages.raw[{#CERT.NAME}]'
             - uuid: cdaa62ff14564e65a945bb1e41fa3704
               name: 'CUP certificate {#CERT.NAME}: subject common name'
               type: DEPENDENT
@@ -1017,12 +1091,12 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x||!x.certificate)throw ''certificate absent'';var a=x.certificate.split(''\n''),s='''';for(var i=0;i<a.length;i++)if(a[i].indexOf(''---'')!==0&&a[i].length)s+=a[i];var z=atob(s),b='''';for(var h=0;h<z.length;h++)b+=String.fromCharCode(z[h]);var oid=String.fromCharCode(85,4,3),want=0,count=0;function len(p){var n=b.charCodeAt(p),q=p+1,w;if(n&128){w=n&127;n=0;while(w--)n=n*256+b.charCodeAt(q++);}return {v:n,p:q};}for(var p=0;p<=b.length-3;p++){if(b.slice(p,p+3)!==oid)continue;if(count++!==want)continue;var q=p+3,t=b.charCodeAt(q),l=len(q+1),v;if(l.p+l.v>b.length)break;if(t===12||t===19||t===20||t===22||t===30){var e=l.p+l.v;v=b.slice(l.p,e);if(t===30){v='''';for(var j=l.p;j<e;j+=2)v+=String.fromCharCode(b.charCodeAt(j)*256+b.charCodeAt(j+1));}if(v)return v;}}throw ''common name absent'';'
+                    - 'var m=/(?:^|,\s*)CN=([^,]+)/.exec(value);if(!m||!m[1])throw ''subject CN absent'';return m[1];'
               master_item:
-                key: cup.certificate.snapshot.raw
+                key: 'cup.certificate.subject[{#CERT.NAME}]'
               tags:
                 - tag: component
-                  value: certificate
+                  value: certificates
                 - tag: scope
                   value: operator
             - uuid: 78ac8536b46e4712aeb7fc954828f365
@@ -1035,12 +1109,12 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x)throw ''certificate absent'';var s='''',a=x.certificate.split(''\n'');for(var i=0;i<a.length;i++)if(a[i].indexOf(''---'')!==0&&a[i].length)s+=a[i];var b=atob(s);function t(p){var q=p+1,n=b[q++];if(n&128){var z=n&127;n=0;while(z--)n=n*256+b[q++];}return {t:b[p],v:q,e:q+n};}function o(n){var q=n.v,v=b[q++],r=v<40?0:Math.floor(v/40),z=v<40?v: v-r*40,a=[r,z];while(q<n.e){v=0;do{z=b[q++];v=v*128+(z&127);}while(z&128);a.push(v);}return a.join(''.'');}function v(n){var s='''';for(var q=n.v;q<n.e;q++)s+=String.fromCharCode(b[q]);return s;}function name(n){var q=n.v,a=[];while(q<n.e){var r=t(q);q=r.e;var p=r.v;while(p<r.e){var e=t(p);p=e.e;var k=t(e.v),w=t(k.e),m={''2.5.4.3'':''CN'',''2.5.4.6'':''C'',''2.5.4.7'':''L'',''2.5.4.8'':''ST'',''2.5.4.10'':''O'',''2.5.4.11'':''OU''};a.push((m[o(k)]||o(k))+''=''+v(w));}}return a.join('', '');}var c=t(0),q=t(c.v),p=q.v,e=t(p);if(e.t===160)p=e.e;p=t(p).e;p=t(p).e;p=t(p).e;p=t(p).e;return name(t(p));'
+                    - 'var d=JSON.parse(value),x=null;(d.identities||d).forEach(function(i){if(i.service==''{#CERT.NAME}'')x=i;});if(!x)throw ''certificate absent'';var s='''',a=x.certificate.split(''\n'');for(var i=0;i<a.length;i++)if(a[i].indexOf(''---'')!==0&&a[i].length)s+=a[i];var z=atob(s),b=[];for(var h=0;h<z.length;h++)b.push(typeof z[h]===''number''?z[h]:z.charCodeAt(h));function t(p){var q=p+1,n=b[q++];if(n&128){var z=n&127;n=0;while(z--)n=n*256+b[q++];}return {t:b[p],v:q,e:q+n};}function o(n){var q=n.v,v=b[q++],r=v<40?0:Math.floor(v/40),z=v<40?v: v-r*40,a=[r,z];while(q<n.e){v=0;do{z=b[q++];v=v*128+(z&127);}while(z&128);a.push(v);}return a.join(''.'');}function v(n){var s='''';for(var q=n.v;q<n.e;q++)s+=String.fromCharCode(b[q]);return s;}function name(n){var q=n.v,a=[];while(q<n.e){var r=t(q);q=r.e;var p=r.v;while(p<r.e){var e=t(p);p=e.e;var k=t(e.v),w=t(k.e),m={''2.5.4.3'':''CN'',''2.5.4.6'':''C'',''2.5.4.7'':''L'',''2.5.4.8'':''ST'',''2.5.4.10'':''O'',''2.5.4.11'':''OU''};a.push((m[o(k)]||o(k))+''=''+v(w));}}return a.join('', '');}var c=t(0),q=t(c.v),p=q.v,e=t(p);if(e.t===160)p=e.e;p=t(p).e;p=t(p).e;p=t(p).e;p=t(p).e;return name(t(p));'
               master_item:
                 key: cup.certificate.snapshot.raw
               tags:
                 - tag: component
-                  value: certificate
+                  value: certificates
                 - tag: scope
                   value: operator
           master_item:
@@ -1068,7 +1142,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var r=/<[^>]*Name>[^<]*Network Interface\({#IF.NAME}\)\\Rx Bytes<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)/.exec(value);if(!r)throw "counter absent";return Number(r[1]);'
+                    - 'var m=/<[^>]*Name>[^<]*Network Interface\({#IF.NAME}\)\\Rx Bytes<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";return Number(r[1]);'
                 - type: CHANGE_PER_SECOND
                   parameters:
                     - ''
@@ -1093,7 +1167,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var r=/<[^>]*Name>[^<]*Network Interface\({#IF.NAME}\)\\Rx Dropped<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)/.exec(value);if(!r)throw "counter absent";return Number(r[1]);'
+                    - 'var m=/<[^>]*Name>[^<]*Network Interface\({#IF.NAME}\)\\Rx Dropped<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";return Number(r[1]);'
                 - type: SIMPLE_CHANGE
                   parameters:
                     - ''
@@ -1116,7 +1190,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var r=/<[^>]*Name>[^<]*Network Interface\({#IF.NAME}\)\\Tx Bytes<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)/.exec(value);if(!r)throw "counter absent";return Number(r[1]);'
+                    - 'var m=/<[^>]*Name>[^<]*Network Interface\({#IF.NAME}\)\\Tx Bytes<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";return Number(r[1]);'
                 - type: CHANGE_PER_SECOND
                   parameters:
                     - ''
@@ -1141,7 +1215,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var r=/<[^>]*Name>[^<]*Network Interface\({#IF.NAME}\)\\Tx Dropped<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)/.exec(value);if(!r)throw "counter absent";return Number(r[1]);'
+                    - 'var m=/<[^>]*Name>[^<]*Network Interface\({#IF.NAME}\)\\Tx Dropped<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";return Number(r[1]);'
                 - type: SIMPLE_CHANGE
                   parameters:
                     - ''
@@ -1159,7 +1233,7 @@ zabbix_export:
               parameters:
                 - |
                   var data=[],seen={},x=new RegExp('{$CUP.INTERFACES.NOT_TO_DISCOVER}'),r=/<[^>]*Name>[^<]*Network Interface\(([^)]+)\)\\Rx Bytes<\/[^>]*Name>/g,m;
-                  while((m=r.exec(value))!==null){if(!seen[m[1]]&&!x.test(m[1])){seen[m[1]]=1;data.push({"{#IF.NAME}":m[1]});}}if(!data.length)throw "no included interfaces";return JSON.stringify({data:data});
+                  while((m=r.exec(value))!==null){var b=value.slice(r.lastIndex),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var v=/<[^>]*Value>\s*([^<]+)/.exec(b),c=/<[^>]*CStatus>\s*([^<]+)/.exec(b),n=v?Number(v[1]):NaN;if(c&&Number(c[1])===1&&isFinite(n)&&n>=0&&!seen[m[1]]&&!x.test(m[1])){seen[m[1]]=1;data.push({"{#IF.NAME}":m[1]});}}if(!data.length)throw "no included interfaces";return JSON.stringify({data:data});
         - uuid: 37e80aa6f12640728096123be49e813c
           name: 'CUP partition discovery'
           type: DEPENDENT
@@ -1179,7 +1253,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var r=/<[^>]*Name>[^<]*Partition\({#PARTITION}\)\\Total Mbytes<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)/.exec(value);if(!r)throw "counter absent";return Number(r[1])*1048576;'
+                    - 'var m=/<[^>]*Name>[^<]*Partition\({#PARTITION}\)\\Total Mbytes<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";return Number(r[1])*1048576;'
               master_item:
                 key: cup.perfmon.partition.raw
               tags:
@@ -1199,7 +1273,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var r=/<[^>]*Name>[^<]*Partition\({#PARTITION}\)\\Used Mbytes<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)/.exec(value);if(!r)throw "counter absent";return Number(r[1])*1048576;'
+                    - 'var m=/<[^>]*Name>[^<]*Partition\({#PARTITION}\)\\Used Mbytes<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";return Number(r[1])*1048576;'
               master_item:
                 key: cup.perfmon.partition.raw
               tags:
@@ -1219,7 +1293,7 @@ zabbix_export:
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
-                    - 'var r=/<[^>]*Name>[^<]*Partition\({#PARTITION}\)\\% Used<\/[^>]*Name>[\s\S]*?<[^>]*Value>([^<]+)/.exec(value);if(!r)throw "counter absent";return Number(r[1]);'
+                    - 'var m=/<[^>]*Name>[^<]*Partition\({#PARTITION}\)\\% Used<\/[^>]*Name>/.exec(value);if(!m)throw "counter absent";var b=value.slice(m.index+m[0].length),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var r=/<[^>]*Value>\s*([^<]+)[\s\S]*?<[^>]*CStatus>\s*([^<]+)/.exec(b);if(!r||Number(r[2])!==1)throw "counter unavailable";return Number(r[1]);'
               master_item:
                 key: cup.perfmon.partition.raw
               tags:
@@ -1229,14 +1303,14 @@ zabbix_export:
                   value: operator
               trigger_prototypes:
                 - uuid: 76fcbcec4fca42f0aa1d37499f32e009
-                  expression: 'min(/Cisco IM and Presence 15 by API/cup.partition.used[{#PARTITION}],10m)>{$CUP.PARTITION.WARN} and min(/Cisco IM and Presence 15 by API/cup.partition.used[{#PARTITION}],10m)<={$CUP.PARTITION.HIGH}'
+                  expression: 'min(/Cisco IM and Presence 15 by API/cup.partition.used[{#PARTITION}],10m)>={$CUP.PARTITION.WARN} and min(/Cisco IM and Presence 15 by API/cup.partition.used[{#PARTITION}],10m)<{$CUP.PARTITION.HIGH}'
                   name: 'CUP partition {#PARTITION} utilization is elevated'
                   priority: WARNING
                   tags:
                     - tag: component
                       value: storage
                 - uuid: 056b368d97ec49788fdfaa3e624590e6
-                  expression: 'min(/Cisco IM and Presence 15 by API/cup.partition.used[{#PARTITION}],10m)>{$CUP.PARTITION.HIGH}'
+                  expression: 'min(/Cisco IM and Presence 15 by API/cup.partition.used[{#PARTITION}],10m)>={$CUP.PARTITION.HIGH}'
                   name: 'CUP partition {#PARTITION} utilization is high'
                   priority: HIGH
                   tags:
@@ -1249,7 +1323,7 @@ zabbix_export:
               parameters:
                 - |
                   var data=[],seen={},x=new RegExp('{$CUP.PARTITIONS.NOT_TO_DISCOVER}'),r=/<[^>]*Name>[^<]*Partition\(([^)]+)\)\\% Used<\/[^>]*Name>/g,m;
-                  while((m=r.exec(value))!==null){if(!seen[m[1]]&&!x.test(m[1])){seen[m[1]]=1;data.push({"{#PARTITION}":m[1]});}}if(!data.length)throw "no included partitions";return JSON.stringify({data:data});
+                  while((m=r.exec(value))!==null){var b=value.slice(r.lastIndex),q=/<[^>]*Name>/.exec(b);if(q)b=b.slice(0,q.index);var v=/<[^>]*Value>\s*([^<]+)/.exec(b),c=/<[^>]*CStatus>\s*([^<]+)/.exec(b),n=v?Number(v[1]):NaN;if(c&&Number(c[1])===1&&isFinite(n)&&n>=0&&n<=100&&!seen[m[1]]&&!x.test(m[1])){seen[m[1]]=1;data.push({"{#PARTITION}":m[1]});}}if(!data.length)throw "no included partitions";return JSON.stringify({data:data});
         - uuid: e6640f61bf0649848d9c32f1a991b07c
           name: 'CUP critical service discovery'
           type: DEPENDENT
@@ -1276,7 +1350,7 @@ zabbix_export:
                 key: cup.control.services.raw
               tags:
                 - tag: component
-                  value: service
+                  value: services
                 - tag: scope
                   value: operator
             - uuid: d3d749f73d2e49e585683ea573aee18e
@@ -1298,7 +1372,7 @@ zabbix_export:
                 key: cup.control.services.raw
               tags:
                 - tag: component
-                  value: service
+                  value: services
                 - tag: scope
                   value: operator
               trigger_prototypes:
@@ -1309,7 +1383,7 @@ zabbix_export:
                   description: 'Review the ControlCenter service state and configured feature before any restart.'
                   tags:
                     - tag: component
-                      value: service
+                      value: services
             - uuid: 6cf04fbfe2a54fc2921e1174893167bf
               name: 'CUP service {#SERVICE.NAME}: uptime'
               type: DEPENDENT
@@ -1328,7 +1402,7 @@ zabbix_export:
                 key: cup.control.services.raw
               tags:
                 - tag: component
-                  value: service
+                  value: services
                 - tag: scope
                   value: operator
               trigger_prototypes:
@@ -1339,7 +1413,7 @@ zabbix_export:
                   description: 'Confirm that the restart was planned; otherwise inspect the ControlCenter reason and related VOS metrics.'
                   tags:
                     - tag: component
-                      value: service
+                      value: services
           master_item:
             key: cup.control.services.raw
           preprocessing:
@@ -1357,37 +1431,37 @@ zabbix_export:
       macros:
         - macro: '{$CUP.API.INTERVAL}'
           value: 2m
-          description: 'Interval for web and ControlCenter API collection.'
+          description: 'Default interval for CUP web reachability and ControlCenter health collection. Use a Zabbix duration such as 2m; shorter values increase Serviceability load.'
         - macro: '{$CUP.API.PASSWORD}'
           type: SECRET_TEXT
           description: 'Secret password for the Serviceability monitoring user.'
         - macro: '{$CUP.API.TIMEOUT}'
           value: 30s
-          description: 'Timeout for a single read-only API request.'
+          description: 'Timeout for one read-only CUP web, PerfMon, ControlCenter, or Certificate Management request. Use a Zabbix duration such as 30s.'
         - macro: '{$CUP.API.USER}'
           value: zabbix-monitor
-          description: 'Dedicated read-only Serviceability monitoring user.'
+          description: 'Dedicated read-only Cisco Serviceability monitoring user for PerfMon and ControlCenter SOAP. Do not use a personal administrator account; override on each host.'
         - macro: '{$CUP.CERT.DISASTER}'
           value: '7'
-          description: 'High certificate expiry threshold in days.'
+          description: 'DISASTER certificate-expiry boundary in days. Values below 0 mean already expired; default 7 raises the urgent pre-expiry tier for certificates expiring within one week.'
         - macro: '{$CUP.CERT.HIGH}'
           value: '30'
-          description: 'Average certificate expiry threshold in days.'
+          description: 'AVERAGE certificate-expiry boundary in days. Default 30 creates the 7-29 day renewal-planning tier.'
         - macro: '{$CUP.CERT.INFO}'
           value: '90'
-          description: 'Informational certificate expiry threshold in days.'
+          description: 'INFO certificate-expiry boundary in days. Default 90 creates an early renewal notice before the warning tier.'
         - macro: '{$CUP.CERT.URL}'
           value: 'https://127.0.0.1'
           description: 'Cisco VOS Certificate Management base URL. Override on each host.'
         - macro: '{$CUP.CERT.WARN}'
           value: '60'
-          description: 'Warning certificate expiry threshold in days.'
+          description: 'WARNING certificate-expiry boundary in days. Default 60 creates the 30-59 day warning tier.'
         - macro: '{$CUP.CPU.HIGH}'
           value: '95'
-          description: 'CPU high threshold in percent.'
+          description: 'HIGH CPU-utilization threshold in percent, evaluated over the sustained trigger window. Raising it reduces sensitivity to PerfMon-reported CPU pressure.'
         - macro: '{$CUP.CPU.WARN}'
           value: '80'
-          description: 'CPU warning threshold in percent.'
+          description: 'WARNING CPU-utilization threshold in percent, evaluated over the sustained trigger window.'
         - macro: '{$CUP.INTERFACES.NOT_TO_DISCOVER}'
           value: ^lo$
           description: 'Regular expression for interfaces excluded from discovery; the loopback interface is excluded by default.'
@@ -1399,46 +1473,46 @@ zabbix_export:
           description: 'Memory warning threshold in percent.'
         - macro: '{$CUP.NODE}'
           value: cup-pub
-          description: 'Exact local PerfMon node name.'
+          description: 'Exact local IM&P node name used in PerfMon counter paths. This must match the node name returned by Cisco Serviceability, not merely the Zabbix visible host name.'
         - macro: '{$CUP.OS.PASSWORD}'
           type: SECRET_TEXT
           description: 'Secret password for the Cisco VOS certificate API user.'
         - macro: '{$CUP.OS.USER}'
           value: os-monitor
-          description: 'Dedicated Cisco VOS certificate API user.'
+          description: 'Dedicated Cisco VOS Certificate Management account created with privilege 0 for read-only certificate APIs. Override on each host.'
         - macro: '{$CUP.PARTITION.HIGH}'
           value: '92'
-          description: 'VOS partition utilization high threshold in percent.'
+          description: 'HIGH generic VOS partition-utilization threshold in percent for discovered partitions. Do not use this to infer health for undocumented image partitions unless they are intentionally included.'
         - macro: '{$CUP.PARTITION.WARN}'
           value: '85'
-          description: 'VOS partition utilization warning threshold in percent.'
+          description: 'WARNING generic VOS partition-utilization threshold in percent for discovered partitions.'
         - macro: '{$CUP.PARTITIONS.NOT_TO_DISCOVER}'
           value: ^$
           description: 'Regular expression for VOS partitions excluded from discovery; ^$ excludes none.'
         - macro: '{$CUP.PERFMON.INTERVAL}'
           value: 5m
-          description: 'Interval for PerfMon platform collection.'
+          description: 'Polling interval for Cisco Serviceability PerfMon platform and IM&P workload collectors. Default 5m keeps this community baseline low-load.'
         - macro: '{$CUP.PRESENCE.QUEUE.HIGH}'
           value: '0'
           description: 'High presence-notification queue threshold. Set above 0 only after defining an environment baseline; 0 disables this workload trigger.'
         - macro: '{$CUP.ROLE}'
           value: publisher
-          description: 'Documented node role: publisher or subscriber.'
+          description: 'Operator documentation value for the node role, typically publisher or subscriber. It is not used in item or trigger expressions in this baseline.'
         - macro: '{$CUP.SERVICEABILITY.URL}'
           value: 'https://127.0.0.1:8443'
-          description: 'IM&P Serviceability PerfMon and ControlCenter base URL. Override on each host.'
+          description: 'IM&P Cisco Serviceability base URL, normally https://<node>:8443. Used for PerfMon and ControlCenter SOAP collectors; override on each host.'
         - macro: '{$CUP.SERVICES.CRITICAL}'
           value: '^(Cisco Tomcat|SOAP -Performance Monitoring APIs|Cisco SIP Proxy|Cisco Presence Engine|Cisco XCP Connection Manager|Cisco XCP Authentication Service)$'
           description: 'Regular expression selecting only intentionally critical IM&P services for discovery and alerts. Add optional Directory, conference, archive, or federation services only when used.'
         - macro: '{$CUP.SWAP.HIGH}'
           value: '50'
-          description: 'Swap utilization high threshold in percent.'
+          description: 'HIGH allocated-swap threshold in percent. Interpret together with physical-memory utilization; Cisco VOS can allocate swap without immediate service impact.'
         - macro: '{$CUP.SWAP.WARN}'
           value: '25'
-          description: 'Swap utilization warning threshold in percent.'
+          description: 'WARNING allocated-swap threshold in percent. Interpret together with physical-memory utilization.'
         - macro: '{$CUP.URL}'
           value: 'https://127.0.0.1'
-          description: 'IM&P web administration base URL. Override on each host.'
+          description: 'IM&P web administration base URL for the independent web reachability check. Override on each host.'
       dashboards:
         - uuid: c0ffee0015aa4c0e8d7b123456789001
           name: 'CUP operations overview'
