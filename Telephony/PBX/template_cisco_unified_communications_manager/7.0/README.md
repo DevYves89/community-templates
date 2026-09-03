@@ -5,7 +5,7 @@
 Monitors Cisco Unified Communications Manager 15 through read-only AXL,
 RISPort70, PerfMon, ControlCenter SOAP, and Cisco VOS Certificate Management
 APIs. The template is exported for Zabbix 7.0 and stores its template release
-as `vendor.name: Zabbix` and `vendor.version: 7.0-5`.
+as `vendor.name: Zabbix` and `vendor.version: 7.0-8`.
 
 Maintainer: DevYves89
 
@@ -40,6 +40,13 @@ be expected. Service outage triggers are opt-in through the contextual
 `{$CUCM.SERVICE.EXPECTED:"<service name>"}` macro.
 SIP-trunk outage triggers use the same opt-in contract through
 `{$CUCM.SIP.TRUNK.EXPECTED:"<trunk name>"}`.
+
+Installed-package inventory is not included. CUCM VOS requires an interactive
+CLI session for `show version active`; native Zabbix SSH uses a noninteractive
+exec request and returns only the VOS startup banner in live validation. Cisco
+does not provide a validated stable read-only public API for the installed COP,
+device-pack, and phone-load package list. An external interactive SSH helper
+would be separate from this agentless community template.
 
 Cisco documents the required access in the [AXL authentication
 guide](https://developer.cisco.com/docs/axl/authentication/), [PerfMon getting
@@ -88,7 +95,9 @@ secret macros. CUCM API availability, installed services, PerfMon counters,
 and certificate endpoints vary by deployment; unsupported APIs should be
 disabled or correctly provisioned rather than treated as a zero metric.
 
-Release 7.0-5 is the feature-frozen agentless infrastructure bugfix baseline.
+Release 7.0-8 is the feature-frozen agentless infrastructure bugfix baseline.
+Installed-package inventory remains deferred until a stable read-only API or
+an agentless interactive transport can be validated.
 Phone-level monitoring, CDR/CMR call quality, DRS, NTP, hardware/core-dump
 alarms, RTMT alert ingestion, Smart Licensing, and unvalidated gateway
 discovery require separate optional templates or a newly proven bounded
