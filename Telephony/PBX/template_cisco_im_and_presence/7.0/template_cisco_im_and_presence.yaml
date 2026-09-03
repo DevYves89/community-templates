@@ -7,7 +7,7 @@ zabbix_export:
     - uuid: 77c9e59f51b94db79cc3c780cff96000
       template: 'Cisco IM and Presence 15 by API'
       name: 'Cisco IM and Presence 15 by API'
-      description: 'Cisco IM and Presence 15 (CUP) baseline monitoring through read-only Cisco Serviceability PerfMon, ControlCenter SOAP, and Cisco VOS Certificate Management APIs. It covers API health, CPU, memory, swap, SIP Proxy sessions, Presence Engine sessions/subscriptions, selected critical services, and identity-certificate Latest Data including CN, issuer, SAN, UTC expiry, Key Usage, and Extended Key Usage from the existing PEM snapshot. Operator values use scope=operator; XML/master payloads use scope=internal. Maintainer: DevYves89.'
+      description: 'Cisco IM and Presence 15 (CUP) baseline monitoring through read-only Cisco Serviceability PerfMon, ControlCenter SOAP, and Cisco VOS Certificate Management APIs. Host setup: set {$CUP.URL}, {$CUP.SERVICEABILITY.URL}, {$CUP.CERT.URL}, {$CUP.NODE} (exact Serviceability node name), {$CUP.API.USER}, {$CUP.API.PASSWORD}, {$CUP.OS.USER}, and {$CUP.OS.PASSWORD}; {$CUP.ROLE} is optional operator documentation. The API user is a dedicated read-only Cisco Serviceability user for PerfMon and ControlCenter. The separate VOS certificate account needs certificate-API privilege 0 (read only). It covers API health, CPU, memory, swap, SIP Proxy sessions, Presence Engine sessions/subscriptions, selected critical services, and identity-certificate Latest Data including CN, issuer, SAN, UTC expiry, Key Usage, and Extended Key Usage from the existing PEM snapshot. Operator values use scope=operator; XML/master payloads use scope=internal. Maintainer: DevYves89.'
       vendor:
         name: Zabbix
         version: 7.0-3
