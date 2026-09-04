@@ -7,10 +7,10 @@ zabbix_export:
     - uuid: c1a0ac6a26694668951da78e5bbe1168
       template: 'Cisco Unified Communications Manager 15 cluster by API'
       name: 'Cisco Unified Communications Manager 15 cluster by API'
-      description: 'Optional agentless cluster-impact monitoring for one CUCM 15 cluster. Link once to a virtual Zabbix cluster host, not to a CUCM node. Host setup: set {$CUCM.AXL.URL} to the Publisher endpoint, {$CUCM.API.USER}, {$CUCM.API.PASSWORD}, and {$CUCM.CLUSTER.SOURCE.HOSTGROUP} (only enabled Publisher/Subscriber core-template hosts); {$CUCM.HTTP.PROXY} and {$CUCM.CLUSTER.NODE.URLS} are optional. It requires Cisco Unified Communications Manager 15 by API 7.0-5 or later on every source host. A read-only Publisher AXL collector lists process nodes, CallManager Groups, and Device Pools, then reads each bounded group to obtain member order; each discovered node receives a bounded direct ControlCenter Cisco CallManager state check. Existing core-template RegisteredHardwarePhones values are aggregated by Zabbix, so this template does not call RISPort70 or listPhone and does not discover individual phones. It deliberately does not collect or write CUCM software versions or host inventory. Contextual {$CUCM.CLUSTER.NODE.EXPECTED:"{#NODE}"} and {$CUCM.CLUSTER.CMG.EXPECTED:"{#CMGROUP}"} opt in to node and CallManager Group alerts. Maintainer: DevYves89.'
+      description: 'Optional agentless cluster-impact monitoring for one CUCM 15 cluster. Link once to a virtual Zabbix cluster host, not to a CUCM node. Host setup: set {$CUCM.AXL.URL} to the Publisher endpoint, {$CUCM.API.USER}, {$CUCM.API.PASSWORD}, and {$CUCM.CLUSTER.SOURCE.HOSTGROUP} (only enabled Publisher/Subscriber core-template hosts); {$CUCM.HTTP.PROXY} and {$CUCM.CLUSTER.NODE.URLS} are optional. It requires Cisco Unified Communications Manager 15 by API 7.0-9 or later on every source host: its RegisteredHardwarePhones item has the required exact node:{HOST.HOST} tag. A read-only Publisher AXL collector lists process nodes, CallManager Groups, and Device Pools, then reads each bounded group to obtain member order; each discovered node receives a bounded direct ControlCenter Cisco CallManager state check. Existing core-template RegisteredHardwarePhones values are aggregated by Zabbix, so this template does not call RISPort70 or listPhone and does not discover individual phones. It deliberately does not collect or write CUCM software versions or host inventory. Contextual {$CUCM.CLUSTER.NODE.EXPECTED:"{#NODE}"} and {$CUCM.CLUSTER.CMG.EXPECTED:"{#CMGROUP}"} opt in to node and CallManager Group alerts. Maintainer: DevYves89.'
       vendor:
         name: Zabbix
-        version: 7.0-6
+        version: 7.0-7
       groups:
         - name: Templates/Telephony
       items:
@@ -74,14 +74,28 @@ zabbix_export:
                 if(!/^https:\/\/[A-Za-z0-9.:[\]-]+(?::\d{1,5})?$/i.test(value))throw 'invalid '+kind;
                 return value.replace(/\/$/,'');
             }
+            function endpointKey(value){
+                /* HTTPS without a port and HTTPS on 8443 address the same CUCM API endpoint. */
+                return nodeUrl(value,'node ControlCenter URL').toLowerCase().replace(/:8443$/,'');
+            }
             function nodeUrlMappings(value){
-                var parsed;
+                var parsed,seen={};
                 try{parsed=JSON.parse(value||'{}');}catch(error){throw 'invalid node URL mapping JSON';}
                 if(!parsed||Array.isArray(parsed)||typeof parsed!=='object')throw 'invalid node URL mapping';
                 Object.keys(parsed).forEach(function(name){
-                    nodeName(name);nodeUrl(String(parsed[name]),'node URL mapping');
+                    var endpoint;
+                    nodeName(name);parsed[name]=nodeUrl(String(parsed[name]),'node URL mapping');endpoint=endpointKey(parsed[name]);
+                    if(seen[endpoint])throw 'multiple node URL mappings target the same ControlCenter endpoint';
+                    seen[endpoint]=name;
                 });
                 return parsed;
+            }
+            function cap(value,kind){
+                value=String(value===undefined?'':value).trim();
+                if(!/^\d+$/.test(value))throw 'invalid '+kind;
+                value=Number(value);
+                if(!isFinite(value)||Math.floor(value)!==value||value<1||value>12)throw 'invalid '+kind;
+                return value;
             }
             function resolveMember(value,nodes){
                 value=nodeName(value);
@@ -109,7 +123,7 @@ zabbix_export:
             var groupXml=post(envelope('listCallManagerGroup','<searchCriteria><name>%</name></searchCriteria><returnedTags><name></name></returnedTags>'),'"CUCM:DB ver='+p.version+' listCallManagerGroup"');
             var poolXml=post(envelope('listDevicePool','<searchCriteria><name>%</name></searchCriteria><returnedTags><name></name><callManagerGroupName></callManagerGroupName></returnedTags>'),'"CUCM:DB ver='+p.version+' listDevicePool"');
             if(!/listProcessNodeResponse/i.test(processXml)||!/listCallManagerGroupResponse/i.test(groupXml)||!/listDevicePoolResponse/i.test(poolXml))throw 'invalid AXL topology response';
-            var nodes={},nodeBlocks=blocks(processXml,'processNode'),configuredNodeUrls=nodeUrlMappings(p.node_urls);
+            var nodes={},nodeBlocks=blocks(processXml,'processNode'),configuredNodeUrls=nodeUrlMappings(p.node_urls),maxNodes=cap(p.max_nodes,'process-node cap'),maxGroups=cap(p.max_cmgroups,'CallManager Group cap');
             if(!nodeBlocks.length)throw 'AXL returned no process nodes';
             for(var i=0;i<nodeBlocks.length;i++){
                 var name=nodeName(field(nodeBlocks[i],'name'));
@@ -117,7 +131,8 @@ zabbix_export:
                 nodes[name]={name:name,usage:label(field(nodeBlocks[i],'nodeUsage')||'Not reported','node usage'),role:label(field(nodeBlocks[i],'processNodeRole')||'Not reported','node role'),url:nodeUrl(configuredNodeUrls[name]||('https://'+name+':8443'),'node ControlCenter URL'),cmgroups:[],devicepools:[]};
             }
             Object.keys(configuredNodeUrls).forEach(function(name){if(!nodes[name])throw 'node URL mapping references an unresolved process node';});
-            if(Object.keys(nodes).length>Number(p.max_nodes))throw 'discovered CUCM node count exceeds configured cap';
+            var endpoints={};Object.keys(nodes).forEach(function(name){var endpoint=endpointKey(nodes[name].url);if(endpoints[endpoint])throw 'multiple process nodes target the same ControlCenter endpoint';endpoints[endpoint]=name;});
+            if(Object.keys(nodes).length>maxNodes)throw 'discovered CUCM node count exceeds configured cap';
             var groups={},groupBlocks=blocks(groupXml,'callManagerGroup');
             if(!groupBlocks.length)throw 'AXL returned no CallManager Groups';
             for(i=0;i<groupBlocks.length;i++){
@@ -125,7 +140,7 @@ zabbix_export:
                 if(groups[groupName])throw 'duplicate AXL CallManager Group identity';
                 groups[groupName]={name:groupName,members:[]};
             }
-            if(Object.keys(groups).length>Number(p.max_cmgroups))throw 'discovered CallManager Group count exceeds configured cap';
+            if(Object.keys(groups).length>maxGroups)throw 'discovered CallManager Group count exceeds configured cap';
             Object.keys(groups).sort().forEach(function(groupName){
                 var groupDetailXml=post(envelope('getCallManagerGroup','<name>'+xmlText(groupName)+'</name>'),'"CUCM:DB ver='+p.version+' getCallManagerGroup"');
                 if(!/getCallManagerGroupResponse/i.test(groupDetailXml))throw 'invalid AXL CallManager Group detail response';
@@ -332,7 +347,7 @@ zabbix_export:
           type: CALCULATED
           key: cucm.cluster.sources.complete
           delay: '5m'
-          params: 'last(//cucm.cluster.sources.total)>0 and last(//cucm.cluster.sources.total)=last(//cucm.cluster.sources.fresh)'
+          params: 'last(//cucm.cluster.sources.total)>0 and last(//cucm.cluster.sources.total)=last(//cucm.cluster.topology.nodes) and last(//cucm.cluster.sources.fresh)=last(//cucm.cluster.topology.nodes) and count(last_foreach(//cucm.cluster.source.node.complete[*],{$CUCM.CLUSTER.SOURCE.FRESHNESS}))=last(//cucm.cluster.topology.nodes) and min(last_foreach(//cucm.cluster.source.node.complete[*],{$CUCM.CLUSTER.SOURCE.FRESHNESS}))=1 and max(last_foreach(//cucm.cluster.source.node.complete[*],{$CUCM.CLUSTER.SOURCE.FRESHNESS}))=1'
           tags:
             - tag: component
               value: cluster
@@ -344,14 +359,14 @@ zabbix_export:
               value: zabbix
           valuemap:
             name: 'CUCM cluster source completeness'
-          description: '1 only when the configured core-template source group is non-empty and every source is fresh. Topology availability is a separate explicit gate on every registration-impact trigger; this prevents an unavailable topology item from producing a secondary calculated-item error.'
+          description: '1 only when the configured source host group has the same cardinality as the discovered topology, all group sources are fresh, and every discovered process node has exactly one fresh core-template value selected by its exact node:{HOST.HOST} tag. Registration impact therefore never aggregates arbitrary, missing, or ambiguous host-group members.'
           triggers:
             - uuid: 737afb6506ea425db0f349fe06b883c1
               expression: 'nodata(/Cisco Unified Communications Manager 15 cluster by API/cucm.cluster.sources.complete,10m)=1 or (count(/Cisco Unified Communications Manager 15 cluster by API/cucm.cluster.sources.complete,10m)>=3 and max(/Cisco Unified Communications Manager 15 cluster by API/cucm.cluster.sources.complete,10m)=0)'
               name: 'CUCM cluster core-template inputs are incomplete or stale'
-              opdata: 'Sources:{?last(//cucm.cluster.sources.total)}; Fresh:{?last(//cucm.cluster.sources.fresh)}; Core sources ready:{ITEM.LASTVALUE1}'
+              opdata: 'Topology nodes:{?last(//cucm.cluster.topology.nodes)}; Sources:{?last(//cucm.cluster.sources.total)}; Fresh:{?last(//cucm.cluster.sources.fresh)}; Core sources ready:{ITEM.LASTVALUE1}'
               priority: HIGH
-              description: 'For ten minutes, the configured core source group has been absent, stale, or unsupported. Topology collection has its own explicit health alert and independently gates registration-impact alerts.'
+              description: 'For ten minutes, the configured core source group has been absent, stale, cardinality-mismatched, or unsupported, or an exact discovered-node source is unavailable. Topology collection has its own explicit health alert and independently gates registration-impact alerts.'
               tags:
                 - tag: component
                   value: cluster
@@ -362,7 +377,7 @@ zabbix_export:
           type: CALCULATED
           key: cucm.cluster.registration.total
           delay: '5m'
-          params: 'sum(last_foreach(/*/cucm.callmanager.registered.hardware?[group="{$CUCM.CLUSTER.SOURCE.HOSTGROUP}"]))'
+          params: 'sum(last_foreach(//cucm.cluster.source.node.registration[*],{$CUCM.CLUSTER.SOURCE.FRESHNESS}))'
           tags:
             - tag: component
               value: registration
@@ -372,7 +387,7 @@ zabbix_export:
               value: operator
             - tag: source
               value: zabbix
-          description: 'Sum of the existing CUCM-core RegisteredHardwarePhones values across the source host group. It starts no CUCM API request.'
+          description: 'Sum of fresh per-discovered-node RegisteredHardwarePhones values, each selected from the CUCM core template by the exact node:{HOST.HOST} tag. It starts no CUCM API request and never aggregates arbitrary source-host-group members.'
         - uuid: ad5521a7ccc44d27867b291a60cb7ec9
           name: 'CUCM cluster: registered-phone seven-day baseline'
           type: CALCULATED
@@ -502,6 +517,42 @@ zabbix_export:
                       value: cluster
                     - tag: entity
                       value: node
+            - uuid: e5262f0b4cde4f9c8bf433c7259b78fa
+              name: 'CUCM cluster node {#NODE}: registered hardware phones source'
+              type: CALCULATED
+              key: 'cucm.cluster.source.node.registration[{#NODE}]'
+              delay: '5m'
+              params: 'sum(last_foreach(/*/cucm.callmanager.registered.hardware?[group="{$CUCM.CLUSTER.SOURCE.HOSTGROUP}" and tag="node:{#NODE}"],{$CUCM.CLUSTER.SOURCE.FRESHNESS}))'
+              description: 'Exact tagged cross-host input from the CUCM core template for this discovered process-node identity. The core RegisteredHardwarePhones item carries node:{HOST.HOST}; a missing, unsupported, stale, or non-unique source is excluded from the aggregate and blocks registration-impact triggers through the completeness gate.'
+              tags:
+                - tag: component
+                  value: registration
+                - tag: entity
+                  value: node
+                - tag: scope
+                  value: operator
+                - tag: source
+                  value: zabbix
+                - tag: node
+                  value: '{#NODE}'
+            - uuid: 24a2b3ff954f410db51d480fa08bc52c
+              name: 'CUCM internal: cluster node {#NODE} registration source completeness'
+              type: CALCULATED
+              key: 'cucm.cluster.source.node.complete[{#NODE}]'
+              delay: '5m'
+              params: 'count(last_foreach(/*/cucm.callmanager.registered.hardware?[group="{$CUCM.CLUSTER.SOURCE.HOSTGROUP}" and tag="node:{#NODE}"],{$CUCM.CLUSTER.SOURCE.FRESHNESS}))'
+              description: 'Number of fresh exact node:{HOST.HOST}-tagged CUCM-core registration inputs for this discovered process node. It must be exactly one; zero blocks registration-impact alerts for a missing or stale mapping and more than one blocks them for an ambiguous mapping.'
+              tags:
+                - tag: component
+                  value: registration
+                - tag: entity
+                  value: node
+                - tag: scope
+                  value: internal
+                - tag: source
+                  value: zabbix
+                - tag: node
+                  value: '{#NODE}'
           master_item:
             key: cucm.cluster.topology.raw
           preprocessing:
@@ -683,7 +734,7 @@ zabbix_export:
           description: 'Maximum age of each CUCM-core RegisteredHardwarePhones value. The default permits normal two-minute source polling but blocks registration impact on stale inputs.'
         - macro: '{$CUCM.CLUSTER.SOURCE.HOSTGROUP}'
           value: 'CUCM cluster nodes'
-          description: 'Exact Zabbix host-group name containing only enabled Publisher/Subscriber hosts with CUCM core 7.0-5+ linked. Exclude this virtual cluster host and unrelated CUCM hosts.'
+          description: 'Exact Zabbix host-group name containing only enabled Publisher/Subscriber hosts with CUCM core 7.0-9+ linked. Each core host technical name must equal its AXL process-node identity so its node:{HOST.HOST} item tag can be selected. Exclude this virtual cluster host and unrelated CUCM hosts.'
         - macro: '{$CUCM.CLUSTER.TOPOLOGY.INTERVAL}'
           value: '1h'
           description: 'Publisher AXL topology collection interval. Each run makes three list calls plus one read-only getCallManagerGroup detail call per discovered group, bounded by {$CUCM.CLUSTER.MAX.CMGROUPS}.'

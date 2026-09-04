@@ -5,7 +5,7 @@
 Monitors Cisco Unified Communications Manager 15 through read-only AXL,
 RISPort70, PerfMon, ControlCenter SOAP, and Cisco VOS Certificate Management
 APIs. The template is exported for Zabbix 7.0 and stores its template release
-as `vendor.name: Zabbix` and `vendor.version: 7.0-8`.
+as `vendor.name: Zabbix` and `vendor.version: 7.0-9`.
 
 Maintainer: DevYves89
 
@@ -95,7 +95,11 @@ secret macros. CUCM API availability, installed services, PerfMon counters,
 and certificate endpoints vary by deployment; unsupported APIs should be
 disabled or correctly provisioned rather than treated as a zero metric.
 
-Release 7.0-8 is the feature-frozen agentless infrastructure bugfix baseline.
+Release 7.0-9 is the feature-frozen agentless infrastructure bugfix baseline.
+Its `RegisteredHardwarePhones` item additionally carries the dynamic
+`node:{HOST.HOST}` tag. This adds no collection load and lets the separate
+CUCM cluster template correlate aggregate inputs with AXL process-node
+identities.
 Installed-package inventory remains deferred until a stable read-only API or
 an agentless interactive transport can be validated.
 Phone-level monitoring, CDR/CMR call quality, DRS, NTP, hardware/core-dump

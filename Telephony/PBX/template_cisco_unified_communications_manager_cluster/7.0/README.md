@@ -5,7 +5,7 @@
 Optional agentless cluster-impact monitoring for one Cisco Unified
 Communications Manager 15 cluster. Link it once to a virtual Zabbix **cluster
 host**—not to the Publisher or a Subscriber. It is exported for Zabbix 7.0
-with `vendor.name: Zabbix` and `vendor.version: 7.0-6`.
+with `vendor.name: Zabbix` and `vendor.version: 7.0-7`.
 
 The template combines a small read-only Publisher AXL topology snapshot with
 existing values from the core **Cisco Unified Communications Manager 15 by
@@ -23,7 +23,7 @@ Maintainer: DevYves89
 - A dedicated CUCM application user assigned **Standard CCM Server
   Monitoring** and a custom read-only AXL group containing **Standard AXL API
   Users** plus **Standard AXL Read Only API Access**.
-- **Cisco Unified Communications Manager 15 by API** release `7.0-5` or
+- **Cisco Unified Communications Manager 15 by API** release `7.0-9` or
   later linked to every Publisher/Subscriber source host.
 - One dedicated Zabbix host group containing exactly those core-template node
   hosts. The virtual cluster host must not be in this group.
@@ -36,8 +36,11 @@ Maintainer: DevYves89
    It requires no agent interface and does not populate host inventory fields.
 2. Link this template only to that virtual cluster host.
 3. Create a host group containing only the real CUCM node hosts with the core
-   template. Set its exact name in `{$CUCM.CLUSTER.SOURCE.HOSTGROUP}` on the
-   virtual host.
+   template. Their **technical Zabbix host names must exactly match** the
+   normalized AXL process-node identities. Set the group's exact name in
+   `{$CUCM.CLUSTER.SOURCE.HOSTGROUP}` on the virtual host. The template also
+   creates an exact per-discovered-node cross-host reference, so a partial,
+   stale, or mismatched source population blocks registration-impact alerts.
 4. On the virtual host, configure the Publisher `{$CUCM.AXL.URL}`, AXL API
    version, the dedicated application user, its secret password, and optional
    HTTP proxy. The credentials are never stored in the export.
@@ -56,18 +59,19 @@ Maintainer: DevYves89
 | `{$CUCM.CLUSTER.TOPOLOGY.INTERVAL}` | `1h` | Publisher AXL topology refresh. |
 | `{$CUCM.CLUSTER.NODE.RUNTIME.INTERVAL}` | `5m` | Per-node ControlCenter state check. |
 | `{$CUCM.CLUSTER.NODE.URLS}` | `{}` | Optional exact AXL-node → ControlCenter HTTPS URL JSON mapping. |
-| `{$CUCM.CLUSTER.MAX.NODES}` | `12` | Fail-closed discovery cap. |
-| `{$CUCM.CLUSTER.MAX.CMGROUPS}` | `12` | Fail-closed CallManager Group cap. |
+| `{$CUCM.CLUSTER.MAX.NODES}` | `12` | Hard fail-closed discovery cap; only integer values `1`–`12` are accepted. |
+| `{$CUCM.CLUSTER.MAX.CMGROUPS}` | `12` | Hard fail-closed CallManager Group cap; only integer values `1`–`12` are accepted. |
 | `{$CUCM.CLUSTER.SOURCE.FRESHNESS}` | `6m` | Maximum age for every core registration source. |
 | `{$CUCM.CLUSTER.PHONE.BASELINE.WINDOW}` | `7d` | Cluster registration rolling mean. |
 | `{$CUCM.CLUSTER.PHONE.BASELINE.MIN.SAMPLES}` | `720` | Samples needed before impact alerts arm. |
 | `{$CUCM.CLUSTER.PHONE.HIGH.PCT}` | `90` | High upper threshold, inclusive. |
 | `{$CUCM.CLUSTER.PHONE.DISASTER.PCT}` | `50` | Disaster lower threshold, inclusive. |
 
-The source-completeness check verifies the configured core-template source
-group and freshness. Valid topology is an additional explicit gate on every
-registration-impact trigger, so an unavailable topology item cannot create a
-secondary calculated-item error. CUCM short node names and FQDNs are
+The source-completeness check requires matching topology/source-group
+cardinality and exactly one fresh exact core-template value for every discovered
+process node. Missing or duplicate node-tagged sources fail closed. Valid topology is an additional explicit gate on every registration-impact
+trigger, so an unavailable topology item cannot create a secondary calculated-
+item error. CUCM short node names and FQDNs are
 reconciled only when the short name identifies exactly one process node;
 ambiguous identities fail closed. CUCM's `CM_<node-short-name>` CallManager
 service form is accepted through that same uniqueness gate. The live validator
@@ -84,8 +88,12 @@ also requires exact source-host and normalized AXL-node identities.
   direct ControlCenter `Cisco CallManager` state check every five minutes.
 - CallManager Group LLD with the ordered primary/secondary/tertiary members,
   plus Device Pool → CallManager Group LLD.
-- Existing core-template `RegisteredHardwarePhones` values aggregated by a
-  Zabbix 7.0 calculated item across the configured source host group.
+- Existing core-template `RegisteredHardwarePhones` values aggregated by
+  exact per-discovered-node Zabbix 7.0 calculated items. Each item selects
+  its source within the configured host group by the core item's exact
+  `node:{HOST.HOST}` tag. Exactly one fresh tagged source is required per
+  discovered node; the host group's count and freshness must still match
+  topology before impact alerts can arm.
 - A seven-day rolling baseline and percentage, gated until 720 aggregate
   samples exist and every source is fresh and complete.
 - **Disaster** when registration remains at or below 50% of baseline for
