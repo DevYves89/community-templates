@@ -10,7 +10,7 @@ zabbix_export:
       description: 'Cisco Unity Connection 15 monitoring through read-only VMREST/CUPI, Cisco Serviceability PerfMon and ControlCenter SOAP, and the Cisco VOS Certificate Management API. Host setup: set {$CUC.URL}, {$CUC.SERVICEABILITY.URL}, {$CUC.CERT.URL}, {$CUC.NODE} (exact PerfMon node name), {$CUC.FQDN}, {$CUC.API.USER}, {$CUC.API.PASSWORD}, {$CUC.OS.USER}, and {$CUC.OS.PASSWORD}; {$CUC.HTTP.PROXY} is optional. The Unity user must have no mailbox and needs Read Only Administrator for GET-only VMREST/CUPI and Serviceability monitoring; System Administrator is a compatibility fallback only if the installed release rejects a required read endpoint. The separate VOS certificate account needs certificate-API privilege 0 (read only). Certificate Latest Data includes CN, issuer, SAN, UTC expiry, Key Usage, and Extended Key Usage from the existing PEM snapshot. Set {$CUC.REPLICATION.EXPECTED}=1 only on a clustered node where file replication is expected. Operator items use scope=operator; transport/master payloads use scope=internal. Maintainer: DevYves89.'
       vendor:
         name: Zabbix
-        version: 7.0-3
+        version: 7.0-4
       groups:
         - name: Templates/Telephony
       items:
@@ -1942,7 +1942,8 @@ zabbix_export:
               type: DEPENDENT
               key: 'cuc.certificate.days[{#CERT.NAME}]'
               delay: '0'
-              description: 'Whole days remaining until the discovered identity certificate expires. Negative values mean the certificate has expired.'
+              value_type: FLOAT
+              description: 'Whole days remaining until the discovered identity certificate expires. Negative values mean the certificate has expired, so the item must use a signed numeric value.'
               preprocessing:
                 - type: JAVASCRIPT
                   parameters:
